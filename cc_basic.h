@@ -3,8 +3,10 @@
 
 #include "cc_init_of.h"
 #include "cc_socket.h"
+#include "cc_log.h"
 
-#define CC_ERR -1
+
+#define CC_ERROR -1
 #define CC_SUCCESS 0
 
 /*used to temperaly to restrict the number \
@@ -19,6 +21,16 @@
 
 #define FUNC_NAME __FUNCTION__
 
+#define CC_TIMEOUT_FOR_HELLO 5
+#define CC_TIMEOUT_FOR_ECHO_REPLY 5
+
+enum sw_state{
+	CC_CONNECT,
+	CC_DISCONNECT,
+	CC_WAIT_HELLO,
+	CC_WAIT_ECHO_REPLY,
+};
+typedef enum sw_state sw_state;
 struct cc_socket{
 	struct sockaddr_in cc_addr;
 	//uint16_t port;
@@ -78,6 +90,8 @@ struct sw_info
 	CThread_pool cc_recv_thread_pool;
 	CThread_pool cc_send_thread_pool;	
 
+	sw_state state;
+
 	message_queue *send_queue;
   	message_queue *recv_queue;	
 }
@@ -86,6 +100,8 @@ typedef struct sw_info sw_info;
 //struct cc_socket listen_socket;
 
 //typedef struct sw_queue cc_sw_queue;
+
+
 
 #endif
 

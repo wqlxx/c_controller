@@ -3,7 +3,7 @@
 
 
 #include "bool.h"
-#include "buffer.h"
+#include "cc_buffer.h"
 
 
 struct message_queue_element {
@@ -18,6 +18,7 @@ typedef struct message_queue{
   message_queue_element *divider;
   message_queue_element *tail;
   unsigned int length;
+  pthread_rwlock_t queue_lock;
 };
 typedef struct message_queue message_queue; 
 

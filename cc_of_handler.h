@@ -27,6 +27,22 @@ struct flow {
     uint8_t             pad[3];
 };
 
+typedef void (*ofp_handler_t)(c_switch_t *sw, struct cbuf *b);
+
+struct of_handler {
+    ofp_handler_t handler;
+    size_t min_size;
+};
+
+#define RET_OF_MSG_HANDLER(sw, h, b, type, length)                              \
+do {                                                                            \
+    if (unlikely(length < h[type].min_size || OF_UNK_MSG(h, type))) {           \
+        c_log_err("unexpected length(%u) or type(%u)", (unsigned)length, type); \
+        return;                                                                 \
+    }                                                                           \
+    return h[type].handler(sw, (void *)b);                                      \
+} while(0)
+
 
 #endif
 
