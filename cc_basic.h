@@ -23,6 +23,9 @@
 
 #define CC_TIMEOUT_FOR_HELLO 5
 #define CC_TIMEOUT_FOR_ECHO_REPLY 5
+#define CC_RECV_BUFFER_SIZE (UINT16_MAX+sizeof( struct ofp_packet_in )-2) 
+#define CC_MAX_SOCKET_BUFF 3*1024*1024
+
 
 enum sw_state{
 	CC_CONNECT,

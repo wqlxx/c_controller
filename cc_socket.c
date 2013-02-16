@@ -12,22 +12,35 @@ cc_set_socket_fd(void)
 }
 
 int
-cc_make_socket_nonblocking(struct cc_socket* cc_socket)
+cc_set_socket_nonblocking(int fd)
 {
-    int flags;
-    if ((flags = fcntl(cc_socket->listen_fd, F_GETFL, NULL)) < 0) {
-        return CC_CONN_ERR;
+    int ret;
+    if ((ret = fcntl(fd, F_GETFL, NULL)) < 0) {
+        return CC_ERROR;
     }
-    if (fcntl((cc_socket->listen_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        return CC_CONN_ERR;
+    if ((ret = fcntl((fd, F_SETFL, flags | O_NONBLOCK)) == -1) {
+        return CC_ERROR;
     }
-    return CC_CONN_SUCCESS;
+    return CC_SUCCESS;
+}
+
+int
+cc_set_socket_nodelay(int fd)
+{
+	int flag = 1;
+  	int ret = setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof( flag ) );
+  	if ( ret < 0 ) {
+    	error( "Failed to set socket options ( fd = %d, ret = %d, errno = %s [%d] ).",
+           fd, ret, strerror( errno ), errno );
+    	return CC_ERROR;
+ 	}
+	return CC_SUCCESS
 }
 
 int 
-cc_set_recvbuf(struct cc_socket* cc_socket,size_t size)
+cc_set_recvbuf(int fd,size_t size)
 {
-	return setsockopt(cc_socket->listen_fd,SOL_SOCKET,SO_RCVBUF,&size,sizeof(size));
+	return setsockopt(fd,SOL_SOCKET,SO_RCVBUF,&size,sizeof(size));
 }
 
 int 
@@ -164,7 +177,13 @@ cc_conn_accept(struct cc_socket *listen_fd)
 	{
 		printf("|ERR|accept failed\n");
 		close(accept_fd);
-		return CC_CONN_ERR;
+		return CC_ERROR;
+	}else if( accept_fd > FD_SETSIZE ) {
+		close(accept_fd);
+	} else {
+		cc_set_socket_nonblocking(accept_fd);
+		cc_set_recvbuf(accept_fd,CC_MAX_SOCKET_BUFF);
+		cc_set_socket_nodelay(accept_fd);
 	}
 
 	/*create a new 'sw_info' after a success 'fork',after the switch leave ,we nend to free the space*/

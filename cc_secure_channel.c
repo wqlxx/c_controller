@@ -1,13 +1,86 @@
-#include "cc_basic.h"
-#include <sys/time.h>
+#include "cc_secure_channel.h"
 
-static void
+static int
+cc_recv_from_secure_channel(sw_info *cc_sw_info,void* op_data)
+{
+	size_t remaining_length = CC_RECV_BUFFER_SIZE - cc_sw_info->recv_queue->length ;
+	buffer *tmp_buff = (buffer*)malloc(struct buffer);
+	if(tmp_buff == NULL)
+	{
+		log_debug_for_cc("create buffer failed!");
+		return CC_ERROR;
+	}
+	
+	sszie_t tmp_recv_buff_length = read(cc_sw_info->cc_switch->cc_socket->fd,tmp_buff->data,CC_BUFFER_SIZE);
+	if(tmp_recv_buff_length < 0)
+	{
+		log_debug_for_cc("recv failed!");
+		perror("recv failed!");
+		if( errno == EINTER || errno == EAGAIN || errno == EWOULDBLOCK )
+		{
+			return CC_ERROR;
+		}
+		perror("recv failed!");
+		//reconnect();
+		return CC_ERROR;
+	}
+
+	/*input the msg in queue*/
+	enqueue_message(cc_sw_info->recv_queue,tmp_buff);
+	
+	size_t read_total = 0;
+	while( tmp_recv_buff_length >= sizeof(struct ofp_header)) {
+		struct ofp_header *header = cc_sw_info->recv_queue->tail->data;
+		if ( header->version != OFP_VERSION ) {
+      		error( "Receive error: invalid version (version %d)", header->version );
+      		ofpmsg_send_error_msg( sw_info,OFPET_BAD_REQUEST, OFPBRC_BAD_VERSION, sw_info->fragment_buf );
+      		return CC_ERROR;
+   		}
+		
+		uint16_t message_length = ntohs( header->length );
+		if( message_length > CC_RECV_BUFFER_SIZE )
+		{
+			perror("recv msg size is larger than buff");
+			break;
+		}
+		/*input the msg in queue*/
+		enqueue_message(cc_sw_info->recv_queue,tmp_buff);
+		
+	}	
+	
+	return CC_SUCCESS;
+}
+
+static int
+cc_handler_message_from_secure_channel(sw_info* cc_sw_info)
+{
+	int ret;
+	int errors = 0;
+	buffer *msg;
+
+	while((msg = dequeue_message( sw_info->recv_queue))
+	{
+		ret = ofpmsg_recv(sw_info,msg);
+		if(ret<0)
+		{
+			perror("failed to handle message to applocation.");
+			errors++;
+		}
+	}	
+
+	return errors == 0 ? CC_SUCCESS : CC_ERROR;
+}
+
+
+static int
 cc_secure_channel_read(sw_info *cc_sw_info)
 {
 	int ret;
-	if(recv_from_secure_channel(cc_sw_info) < 0)
+	if(cc_recv_from_secure_channel(cc_sw_info) < 0)
 	{
-		log_err_for_cc();
+		log_err_for_cc("read from secure channel failed!");
+		perror("read error!");
+		return CC_ERROR;
 	}
 
 	if(cc_sw_info->recv_queue->length > 0)
@@ -15,13 +88,47 @@ cc_secure_channel_read(sw_info *cc_sw_info)
 		ret = cc_handler_message_from_secure_channel(cc_sw_info);
 		if(ret < 0)
 		{
-		
+			log_err_for_cc("handle message error!");
+			perror("handle msg error!");
+			return CC_ERROR;
 		}
+	}
+	
+	return CC_SUCCESS;
+}
+
+static int
+cc_send_to_secure_channel(sw_info* cc_sw_info)
+{
+	int ret;
+	buffer* msg;
+
+	while(( msg = peek_message(cc_sw_info->recv_queue) )!= NULL)
+	{
+		ssize_t write_length = write( cc_sw_info->cc_switch->cc_socket->fd,msg,sizeof(msg));
+		if( write_length < 0 )
+		{
+			if ( errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK ) 
+			{
+				
+				return CC_ERROR;
+			}
+			perror("fail to write a message to secure channel");
+			return CC_ERROR;
+		}else if( (size_t)write_length > 0 && (size_t)write_length < msg->length ) {
+			log_err_for_cc("write msg to secure channel error!");
+			//write( cc_sw_info->cc_switch->cc_socket->fd,msg,sizeof(msg));
+			continue;
+		}
+
+		buffer* buf = dequeue_message(message_queue * queue);
+		free_buffer(buf);
 	}
 }
 
+
 /*send to secure channel through socket*/
-static void
+static int
 cc_secure_channel_write(sw_info *cc_sw_info)
 {
 	int ret;
@@ -37,9 +144,8 @@ cc_secure_channel_write(sw_info *cc_sw_info)
 		return CC_ERROR;
 	}
 
-	return CC_SUCCESS
+	return CC_SUCCESS;
 }
-
 
 /*get the msg to be sent form the queue*/
 int
@@ -55,20 +161,43 @@ cc_get_out_queue(sw_info *cc_sw_info)
 	buffer* cc_buf;
 	ssize_t cc_write_len;
 
+	/*
 	pthread_rwlock_wrlock(&cc_sw_info->send_queue->queue_lock,NULL);
 	
 	if( sw_info->send_queue->length == 0 ){
 		return CC_ERROR;
 	}
-
+	*/
+	get_out_of_the_recv_queue(cc_sw_info);
+	
 	
 		
-	
+	/*
 	/****to be continue******/
 	pthread_rwlock_unlock(&cc_sw_info->send_queue->queue_lock);
+	*/
 }
 	
+/*temp code*/
+buffer*
+get_out_of_the_recv_queue(cc_sw_info)
+{	
+	pthread_rwlock_lock(&cc_sw_info->queue->queue_lock,NULL);
 
+	if(cc_sw_info->queue->length == 0)
+	{
+		log_err_for_cc();
+		return CC_ERROR:
+	}
+	
+	buffer* tans_buff;
+	tans_buff = cc_sw_info->queue->head->data;
+	
+	pthread_rwlock_lock(&cc_sw_info->queue->queue_lock,NULL);
+	
+	return tans_buff;
+}
+/************************************************/
 
 static void
 cc_time_out_event(sw_info *cc_sw_info)

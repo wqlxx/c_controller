@@ -8,104 +8,90 @@
 #include "utility.h"
 #include "wrapper.h"
 
-
+/*
 typedef struct {
   buffer public;
   size_t real_length;
   void *top;
   pthread_mutex_t *mutex;
 } private_buffer;
-
+*/
 
 static size_t
-front_length_of( const private_buffer *pbuf ) {
-  assert( pbuf != NULL );
+front_length_of( buffer *buff ) {
+  assert( buff!= NULL );
 
-  return ( size_t ) ( ( char * ) pbuf->public.data - ( char * ) pbuf->top );
+  return ( size_t ) ( ( char * ) buff->data - ( char * ) buff->top );
 }
 
 
 static bool
-already_allocated( private_buffer *pbuf, size_t length ) {
-  assert( pbuf != NULL );
+already_allocated( buffer *buff, size_t length ) {
+  assert( buff != NULL );
 
-  size_t required_length = ( size_t ) front_length_of( pbuf ) + pbuf->public.length + length;
+  size_t required_length = ( size_t ) front_length_of( buff ) + buff->length + length;
 
-  return ( pbuf->real_length >= required_length );
+  return ( buff->real_length >= required_length );
 }
 
 
-static private_buffer *
-alloc_new_data( private_buffer *pbuf, size_t length ) {
-  assert( pbuf != NULL );
+static buffer *
+alloc_new_data( buffer* buff, size_t length ) {
+  assert( buff != NULL );
 
-  pbuf->public.data = xmalloc( length );
-  pbuf->public.length = length;
-  pbuf->top = pbuf->public.data;
-  pbuf->real_length = length;
-
-  return pbuf;
-}
-
-
-static private_buffer *
-alloc_private_buffer() {
-  private_buffer *new_buf = xcalloc( 1, sizeof( private_buffer ) );
-
-  new_buf->public.data = NULL;
-  new_buf->public.length = 0;
-  new_buf->public.user_data = NULL;
-  new_buf->public.user_data_free_function = NULL;
-  new_buf->top = NULL;
-  new_buf->real_length = 0;
+  buff->data = (void*)malloc( length );
+  buff->length = length;
+  buff->top = buff->data;
+  buff->real_length = length;
+  buff->tail = buff->data + length - 1;
 
   pthread_mutexattr_t attr;
   pthread_mutexattr_init( &attr );
   pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE_NP );
   new_buf->mutex = xmalloc( sizeof( pthread_mutex_t ) );
-  pthread_mutex_init( new_buf->mutex, &attr );
+  pthread_mutex_init( buff->mutex, &attr );
 
-  return new_buf;
+  return buff;
+}
+
+static buffer *
+append_front( buffer* buff, size_t length ) {
+  assert( buff != NULL );
+
+  size_t new_length = front_length_of( buff ) + buff->length + length;
+  void *new_data = malloc( new_length );
+  memcpy( ( char * ) new_data + front_length_of( buff ) + length, buff->data, buff->length );
+  free( buff->top );
+
+  buff->data = ( char * ) new_data + front_length_of( buff );
+  buff->real_length = new_length;
+  buff->top = new_data;
+  buff->tail = new_data + new_length - 1;
+
+  return buff;
 }
 
 
-static private_buffer *
-append_front( private_buffer *pbuf, size_t length ) {
-  assert( pbuf != NULL );
+static buffer *
+append_back( buffer* buff, size_t length ) {
+  assert( buff != NULL );
 
-  size_t new_length = front_length_of( pbuf ) + pbuf->public.length + length;
-  void *new_data = xmalloc( new_length );
-  memcpy( ( char * ) new_data + front_length_of( pbuf ) + length, pbuf->public.data, pbuf->public.length );
-  xfree( pbuf->top );
+  size_t new_length = front_length_of( buff ) + buff->length + length;
+  void *new_data = malloc( new_length );
+  memcpy( ( char * ) new_data + front_length_of( buff ), buff->data, buff->length );
+  free( buff->top );
 
-  pbuf->public.data = ( char * ) new_data + front_length_of( pbuf );
-  pbuf->real_length = new_length;
-  pbuf->top = new_data;
+  buff->data = ( char * ) new_data + front_length_of( buff );
+  buff->real_length = new_length;
+  buff->top = new_data;
 
-  return pbuf;
-}
-
-
-static private_buffer *
-append_back( private_buffer *pbuf, size_t length ) {
-  assert( pbuf != NULL );
-
-  size_t new_length = front_length_of( pbuf ) + pbuf->public.length + length;
-  void *new_data = xmalloc( new_length );
-  memcpy( ( char * ) new_data + front_length_of( pbuf ), pbuf->public.data, pbuf->public.length );
-  xfree( pbuf->top );
-
-  pbuf->public.data = ( char * ) new_data + front_length_of( pbuf );
-  pbuf->real_length = new_length;
-  pbuf->top = new_data;
-
-  return pbuf;
+  return buff;
 }
 
 
 buffer *
 alloc_buffer() {
-  return ( buffer * ) alloc_private_buffer();
+  return ( buffer * ) alloc_new_data();
 }
 
 
@@ -113,18 +99,18 @@ buffer *
 alloc_buffer_with_length( size_t length ) {
   assert( length != 0 );
 
-  private_buffer *new_buf = xcalloc( 1, sizeof( private_buffer ) );
-  new_buf->public.data = xmalloc( length );
-  new_buf->public.length = 0;
-  new_buf->public.user_data = NULL;
-  new_buf->public.user_data_free_function = NULL;
-  new_buf->top = new_buf->public.data;
+  buffer *new_buf = xcalloc( 1, sizeof( buffer ) );
+  new_buf->data = malloc( length );
+  new_buf->length = 0;
+  new_buf->top = new_buf->data;
   new_buf->real_length = length;
-
+  new_buf->length = length;
+  new_buf->tail = new_buf->top + length;
+  
   pthread_mutexattr_t attr;
   pthread_mutexattr_init( &attr );
   pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE_NP );
-  new_buf->mutex = xmalloc( sizeof( pthread_mutex_t ) );
+  new_buf->mutex = malloc( sizeof( pthread_mutex_t ) );
   pthread_mutex_init( new_buf->mutex, &attr );
 
   return ( buffer * ) new_buf;
@@ -134,21 +120,16 @@ alloc_buffer_with_length( size_t length ) {
 void
 free_buffer( buffer *buf ) {
   assert( buf != NULL );
-
-  if ( buf->user_data != NULL && buf->user_data_free_function != NULL ) {
-    ( *buf->user_data_free_function )( buf );
-    assert( buf->user_data == NULL );
-    assert( buf->user_data_free_function == NULL );
+  
+  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
+  buffer *delete_buf = ( buffer * ) buf;
+  if ( delete_buf->top != NULL ) {
+    xfree( delete_buf->top );
   }
-  pthread_mutex_lock( ( ( private_buffer * ) buf )->mutex );
-  private_buffer *delete_me = ( private_buffer * ) buf;
-  if ( delete_me->top != NULL ) {
-    xfree( delete_me->top );
-  }
-  pthread_mutex_unlock( delete_me->mutex );
-  pthread_mutex_destroy( delete_me->mutex );
-  xfree( delete_me->mutex );
-  xfree( delete_me );
+  pthread_mutex_unlock( delete_buf->mutex );
+  pthread_mutex_destroy( delete_buf->mutex );
+  free( delete_buf->mutex );
+  free( delete_buf );
 }
 
 
@@ -157,27 +138,26 @@ append_front_buffer( buffer *buf, size_t length ) {
   assert( buf != NULL );
   assert( length != 0 );
 
-  pthread_mutex_lock( ( ( private_buffer * ) buf )->mutex );
+  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
 
-  private_buffer *pbuf = ( private_buffer * ) buf;
+  buffer* b = ( buffer * ) buf;
 
-  if ( pbuf->top == NULL ) {
-    alloc_new_data( pbuf, length );
-    pthread_mutex_unlock( pbuf->mutex );
-    return pbuf->public.data;
+  if ( buff->top == NULL ) {
+    alloc_new_data( buff, length );
+    pthread_mutex_unlock( buff->mutex );
+    return buff->data;
   }
-
-  buffer *b = &( pbuf->public );
-  if ( already_allocated( pbuf, length ) ) {
+  
+  if ( already_allocated( b, length ) ) {
     memmove( ( char * ) b->data + length, b->data, b->length );
     memset( b->data, 0, length );
   }
   else {
-    append_front( pbuf, length );
+    append_front( b, length );
   }
   b->length += length;
 
-  pthread_mutex_unlock( pbuf->mutex );
+  pthread_mutex_unlock( buff->mutex );
 
   return b->data;
 }
@@ -188,17 +168,17 @@ remove_front_buffer( buffer *buf, size_t length ) {
   assert( buf != NULL );
   assert( length != 0 );
 
-  pthread_mutex_lock( ( ( private_buffer * ) buf )->mutex );
+  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
 
-  private_buffer *pbuf = ( private_buffer * ) buf;
-  assert( pbuf->public.length >= length );
+  buffer* b = ( buffer * ) buf;
+  assert( buff->length >= length );
 
-  pbuf->public.data = ( char * ) pbuf->public.data + length;
-  pbuf->public.length -= length;
+  buff->data = ( char * ) buff->data + length;
+  buff->length -= length;
 
-  pthread_mutex_unlock( pbuf->mutex );
+  pthread_mutex_unlock( buff->mutex );
 
-  return pbuf->public.data;
+  return buff->data;
 }
 
 
@@ -207,24 +187,24 @@ append_back_buffer( buffer *buf, size_t length ) {
   assert( buf != NULL );
   assert( length != 0 );
 
-  pthread_mutex_lock( ( ( private_buffer * ) buf )->mutex );
+  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
 
-  private_buffer *pbuf = ( private_buffer * ) buf;
+  buffer* b = ( buffer * ) buf;
 
-  if ( pbuf->real_length == 0 ) {
-    alloc_new_data( pbuf, length );
-    pthread_mutex_unlock( pbuf->mutex );
-    return ( char * ) pbuf->public.data;
+  if ( buff->real_length == 0 ) {
+    alloc_new_data( buff, length );
+    pthread_mutex_unlock( buff->mutex );
+    return ( char * ) buff->data;
   }
 
-  if ( !already_allocated( pbuf, length ) ) {
-    append_back( pbuf, length );
+  if ( !already_allocated( buff, length ) ) {
+    append_back( buff, length );
   }
 
-  void *appended = ( char * ) pbuf->public.data + pbuf->public.length;
-  pbuf->public.length += length;
+  void *appended = ( char * ) buff->data + buff->length;
+  buff->length += length;
 
-  pthread_mutex_unlock( pbuf->mutex );
+  pthread_mutex_unlock( buff->mutex );
 
   return appended;
 }
@@ -234,10 +214,10 @@ buffer *
 duplicate_buffer( const buffer *buf ) {
   assert( buf != NULL );
 
-  pthread_mutex_lock( ( ( const private_buffer * ) buf )->mutex );
+  pthread_mutex_lock( ( ( const buffer * ) buf )->mutex );
 
-  private_buffer *new_buffer = alloc_private_buffer();
-  const private_buffer *old_buffer = ( const private_buffer * ) buf;
+  buffer *new_buffer = alloc_buffer();
+  const buffer *old_buffer = ( const buffer * ) buf;
 
   if ( old_buffer->real_length == 0 ) {
     pthread_mutex_unlock( old_buffer->mutex );
@@ -262,7 +242,7 @@ void
 dump_buffer( const buffer *buf, void dump_function( const char *format, ... ) ) {
   assert( dump_function != NULL );
 
-  pthread_mutex_lock( ( ( const private_buffer * ) buf )->mutex );
+  pthread_mutex_lock( ( ( const buffer * ) buf )->mutex );
 
   char *hex = xmalloc( sizeof( char ) * ( buf->length * 2 + 1 ) );
   uint8_t *datap = buf->data;
@@ -274,5 +254,5 @@ dump_buffer( const buffer *buf, void dump_function( const char *format, ... ) ) 
 
   xfree( hex );
 
-  pthread_mutex_unlock( ( ( const private_buffer * ) buf )->mutex );
+  pthread_mutex_unlock( ( ( const buffer * ) buf )->mutex );
 }

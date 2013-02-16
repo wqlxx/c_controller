@@ -4,13 +4,7 @@ static inline uint32_t
 make_inet_mask(uint8_t len)
 {
     return (~((1 << (32 - (len))) - 1));
-}
-
-static void
-cc_recv_hello_msg(c_switch_t *sw,struct cbuf *b)
-{
-}
-
+\}
 
 char*
 cc_dump_flow(struct flow* flow,uint32_t wildcards)
@@ -106,20 +100,53 @@ cc_dump_flow(struct flow* flow,uint32_t wildcards)
 	}
 
 }
+
+static void
+cc_recv_hello_msg(sw_info* cc_sw_info,buffer* b)
+{
 	
+}
+
 int
-cc_send_hello(struct cc_socket* cc_socket)
+cc_send_hello_msg(sw_info* cc_sw_info)
 {
 	struct ofp_header hello;
 	hello.version = OFP_VERSION;
 	hello.type = OFPT_HELLO;
 	hello.length = htons(sizeof hello);
 	hello.xid = 0;
+
+	buffer* buff;
+	buff->data = &hello;
+	buff->length = sizeof(hello);
+
+	/*
+	ssize_t ret;
+	ret = write(cc_sw_info->cc_switch->cc_socket->fd,buff,sizeof(buff));
+	if(ret != sizeof(hello))
+	{
+		perror("send of hello failed");
+		log_err_for_cc("send of hello failed");
+		return CC_ERROR;
+	}
+	*/
+	cc_send_to_secure_channel(cc_sw_info,buff);
+	return CC_SUCCESS;
+}
+
+int
+cc_send_err_msg(sw_info* cc_sw_info,uint16_t type,uint16_t code,buffer* b)
+{
+	int ret;
+	buffer* buff;
+
+	if( 
 }
 
 static void
-cc_recv_err_msg(c_switch_t *sw,struct cbuf *b)
+cc_recv_err_msg(sw_info* cc_sw_info,buffer* b)
 {
+	
 	struct ofp_error_msg *ofp_err = (void*)(b->data);
 	struct flow err_flow;
 	char *str;
@@ -161,55 +188,80 @@ cc_recv_err_msg(c_switch_t *sw,struct cbuf *b)
 }
 
 static void
-cc_recv_echo_request(c_switch_t *sw,struct cbuf *b)
+cc_recv_echo_request(sw_info* cc_sw_info,buffer* data)
 {
-}
+	struct ofp_header *header = data->data;
+	uint32_t transaction_id = htonl(header->xid);
+	uint16_t length = htons( header->length);
 
-static void
-cc_recv_echo_reply(c_switch_t *sw,struct cbuf *b)
-{
-}
+	if(
 
-static void
-cc_recv_features_reply(c_switch_t *sw,struct cbuf *b)
-{
-}
+	buffer* body = NULL;
+	if((length - sizeof(struct ofp_header))>0)
+	{
+		body = duplicate_buffer(data);
+		remove_front_buffer(body,sizeof(struct ofp_header));
+	}
 
-static void
-cc_recv_packet_in(c_switch_t *sw,struct cbuf *b)
-{
-}
-
-static void
-cc_flow_removed(c_switch_t *sw,struct cbuf *b)
-{
-}
-
-static void
-cc_recv_port_status(c_switch_t *sw,struct cbuf *b)
-{
-}
 	
+
+	if( body != NULL )
+		free_buffer(body);
+
+	return cc_send_echo_reply(cc_sw_info,header->xid);//here the xid should be correct!
+}
+
+static void
+cc_recv_echo_reply(sw_info* cc_sw_info,buffer* b)
+{
+	
+}
+
+static void
+cc_recv_features_reply(sw_info* cc_sw_info,buffer* b)
+{
+	
+}
+
+static void
+cc_recv_packet_in(sw_info* cc_sw_info,buffer* b)
+{
+	
+}
+
+static void
+cc_flow_removed(sw_info* cc_sw_info,buffer* b)
+{
+
+}
+
+static void
+cc_recv_port_status(sw_info* cc_sw_info,buffer* b)
+{
+
+}
+
 struct of_handler of_handlers[] __aligned = {
-    { cc_recv_hello_msg, OFP_HDR_SZ},                           /* OFPT_HELLO */
-    { cc_recv_err_msg, sizeof(struct ofp_error_msg) },          /* OFPT_ERROR */
-    { cc_recv_echo_request, OFP_HDR_SZ },                       /* OFPT_ECHO_REQUEST */
-    { cc_recv_echo_reply, OFP_HDR_SZ },                         /* OFPT_ECHO_REPLY */
-    NULL_OF_HANDLER,                                            /* OFPT_VENDOR */
-    NULL_OF_HANDLER,                                            /* OFPT_FEATURES_REQUEST */
-    { cc_recv_features_reply, OFP_HDR_SZ },                     /* OFPT_FEATURES_REPLY */
-    NULL_OF_HANDLER,                                            /* OFPT_GET_CONFIG_REQUEST */
-    NULL_OF_HANDLER,                                            /* OFPT_GET_CONFIG_REPLY */
-    NULL_OF_HANDLER,                                            /* OFPT_SET_CONFIG */
-    { cc_recv_packet_in, sizeof(struct ofp_packet_in) },        /* OFPT_PACKET_IN */
-    { cc_flow_removed, sizeof(struct ofp_flow_removed) },       /* OFPT_FLOW_REMOVED */
-    { cc_recv_port_status, sizeof(struct ofp_port_status) },    /* OFPT_PORT_STATUS */
-    NULL_OF_HANDLER,                                            /* OFPT_PACKET_OUT */
-    NULL_OF_HANDLER,                                            /* OFPT_FLOW_MOD */
-    NULL_OF_HANDLER,                                            /* OFPT_PORT_MOD */
-    NULL_OF_HANDLER,                                            /* OFPT_STATS_REQUEST */
-    NULL_OF_HANDLER,                                            /* OFPT_STATS_REPLY */
-    NULL_OF_HANDLER,                                            /* OFPT_BARRIER_REQUEST */
-    NULL_OF_HANDLER,                                            /* OFPT_BARRIER_REPLY */
+    NULL,               			/* OFPT_HELLO */
+    cc_recv_err_msg,        		/* OFPT_ERROR */
+	cc_recv_echo_request,           /* OFPT_ECHO_REQUEST */
+    cc_recv_echo_reply,             /* OFPT_ECHO_REPLY */
+    NULL,                			/* OFPT_VENDOR */
+    NULL,               			/* OFPT_FEATURES_REQUEST */
+    cc_recv_features_reply,         /* OFPT_FEATURES_REPLY */
+    NULL,                			/* OFPT_GET_CONFIG_REQUEST */
+    NULL,                			/* OFPT_GET_CONFIG_REPLY */
+    NULL,                			/* OFPT_SET_CONFIG */
+    cc_recv_packet_in,        		/* OFPT_PACKET_IN */
+    cc_flow_removed,      			/* OFPT_FLOW_REMOVED */
+    cc_recv_port_status,   			/* OFPT_PORT_STATUS */
+    NULL,                			/* OFPT_PACKET_OUT */
+    NULL,                			/* OFPT_FLOW_MOD */
+    NULL,                			/* OFPT_PORT_MOD */
+    NULL,                			/* OFPT_STATS_REQUEST */
+    NULL,                			/* OFPT_STATS_REPLY */
+    NULL,                			/* OFPT_BARRIER_REQUEST */
+    NULL,                			/* OFPT_BARRIER_REPLY */
 };
+
 

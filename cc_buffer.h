@@ -6,10 +6,14 @@
 
 
 typedef struct buffer {
-  void *data;
+  void* data;
+  void* top;
+  void* tail;
   size_t length;
-  void *user_data;
-  void ( *user_data_free_function )( struct buffer *buffer );
+  size_t real_length;
+  pthread_mutex_t* mutex;
+  //void *user_data;
+  //void ( *user_data_free_function )( struct buffer *buffer );
 } buffer;
 
 

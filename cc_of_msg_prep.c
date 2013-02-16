@@ -384,3 +384,31 @@ of_prep_pkt_out_msg(struct of_pkt_out_params *parms)
     return b;
 }
 
+static buffer *
+create_header( const uint32_t transaction_id, const uint8_t type, const uint16_t length ) {
+  debug( "Creating an OpenFlow header ( version = %#x, type = %#x, length = %u, xid = %#x ).",
+         OFP_VERSION, type, length, transaction_id );
+
+  assert( length >= sizeof( struct ofp_header ) );
+
+  buffer *buffer = alloc_buffer();
+  assert( buffer != NULL );
+
+  struct ofp_header *header = append_back_buffer( buffer, length );
+  assert( header != NULL );
+  memset( header, 0, length );
+
+  header->version = OFP_VERSION;
+  header->type = type;
+  header->length = htons( length );
+  header->xid = htonl( transaction_id );
+
+  return buffer;
+}
+
+int 
+cc_create_error(uint32_t xid, uint16_t type, uint16_t code, buffer* data)
+{
+	struct ofp_error_msg *error_msg;
+	
+}

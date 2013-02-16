@@ -5,11 +5,6 @@
 /*from mul_of */
 #include "cc_basic.h"
 
-#define NULL_OF_HANDLER     {NULL,sizeof(struct ofp_header)}
-#define OFP_HDR_SZ          sizeof(struct ofp_header)
-
-#define LENGTH_OF_MAC 6
-/*4*2+2*5+6*2+1*4+2*/
 struct flow {
     uint32_t            nw_src;            /* IP source address. */
     uint32_t            nw_dst;            /* IP destination address. */
@@ -27,11 +22,10 @@ struct flow {
     uint8_t             pad[3];
 };
 
-typedef void (*ofp_handler_t)(c_switch_t *sw, struct cbuf *b);
+typedef void (*ofp_handler_t)(sw_info *cc_sw_info, buffer *b);
 
 struct of_handler {
     ofp_handler_t handler;
-    size_t min_size;
 };
 
 #define RET_OF_MSG_HANDLER(sw, h, b, type, length)                              \
@@ -42,7 +36,6 @@ do {                                                                            
     }                                                                           \
     return h[type].handler(sw, (void *)b);                                      \
 } while(0)
-
 
 #endif
 

@@ -36,7 +36,7 @@ extern int
 cc_close_socket(struct cc_socket* cc_socket);
 
 extern int
-cc_make_socket_nonblocking(struct cc_socket* cc_socket);
+cc_set_socket_nonblocking(struct cc_socket * cc_socket)(struct cc_socket* cc_socket);
 
 extern int 
 cc_set_recvbuf(struct cc_socket* cc_socket,size_t size);
