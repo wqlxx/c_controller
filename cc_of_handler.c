@@ -101,15 +101,22 @@ cc_dump_flow(struct flow* flow,uint32_t wildcards)
 
 }
 
-static void
-cc_recv_hello_msg(sw_info* cc_sw_info,buffer* b)
+static int
+cc_recv_hello_msg(sw_info* cc_sw_info,buffer* buf)
 {
+	int ret;
+	log_info_for_cc("recv a hello message");
+	free_buffer(buf);
 	
+	return CC_SUCCESS;
 }
 
 int
 cc_send_hello_msg(sw_info* cc_sw_info)
 {
+	int ret;
+	buffer* buf;
+	
 	struct ofp_header hello;
 	hello.version = OFP_VERSION;
 	hello.type = OFPT_HELLO;
@@ -134,6 +141,8 @@ cc_send_hello_msg(sw_info* cc_sw_info)
 	return CC_SUCCESS;
 }
 
+
+/*
 int
 cc_send_err_msg(sw_info* cc_sw_info,uint16_t type,uint16_t code,buffer* b)
 {
@@ -142,8 +151,10 @@ cc_send_err_msg(sw_info* cc_sw_info,uint16_t type,uint16_t code,buffer* b)
 
 	if( 
 }
+*/
 
-static void
+
+static int
 cc_recv_err_msg(sw_info* cc_sw_info,buffer* b)
 {
 	
@@ -185,9 +196,11 @@ cc_recv_err_msg(sw_info* cc_sw_info,buffer* b)
 				break;
 				
 	}
+	return CC_SUCCESS;
 }
 
-static void
+
+static int
 cc_recv_echo_request(sw_info* cc_sw_info,buffer* data)
 {
 	struct ofp_header *header = data->data;
@@ -211,11 +224,27 @@ cc_recv_echo_request(sw_info* cc_sw_info,buffer* data)
 	return cc_send_echo_reply(cc_sw_info,header->xid);//here the xid should be correct!
 }
 
-static void
-cc_recv_echo_reply(sw_info* cc_sw_info,buffer* b)
+
+static int
+cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 {
 	
 }
+
+
+static int
+cc_send_echo_request(sw_info* cc_sw_info)
+{
+
+}
+
+
+static int
+cc_send_echo_reply(sw_info* cc_sw_info,uint32_t xid)
+{
+	
+}
+
 
 static void
 cc_recv_features_reply(sw_info* cc_sw_info,buffer* b)
@@ -242,7 +271,7 @@ cc_recv_port_status(sw_info* cc_sw_info,buffer* b)
 }
 
 struct of_handler of_handlers[] __aligned = {
-    NULL,               			/* OFPT_HELLO */
+    cc_recv_hello_msg,              /* OFPT_HELLO */
     cc_recv_err_msg,        		/* OFPT_ERROR */
 	cc_recv_echo_request,           /* OFPT_ECHO_REQUEST */
     cc_recv_echo_reply,             /* OFPT_ECHO_REPLY */

@@ -18,6 +18,8 @@ create_message_queue( void ) {
 
 bool
 delete_message_queue( message_queue *queue ) {
+
+  pthread_rwlock_wrlock(&(queue->queue_lock));
   if ( queue == NULL ) {
     die( "queue must not be NULL" );
   }
@@ -30,6 +32,7 @@ delete_message_queue( message_queue *queue ) {
     queue->head = queue->head->next;
     free( element );
   }
+  pthread_rwlock_unlock(&(queue->queue_lock));
   free( queue );
 
   return true;
@@ -48,6 +51,8 @@ collect_garbage( message_queue *queue ) {
 
 bool
 enqueue_message( message_queue *queue, buffer *message ) {
+
+  pthread_rwlock_wrlock(&(queue->queue_lock));
   if ( queue == NULL ) {
     die( "queues must not be NULL" );
   }
@@ -64,13 +69,16 @@ enqueue_message( message_queue *queue, buffer *message ) {
   queue->length++;
 
   collect_garbage( queue );
-
+  pthread_rwlock_unlock(&(queue->queue_lock));
+  
   return true;
 }
 
 
-buffer *
+buffer*
 dequeue_message( message_queue *queue ) {
+
+  pthread_rwlock_rdlock(&(queue->queue_lock));
   if ( queue == NULL ) {
     die( "queue must not be NULL" );
   }
@@ -84,12 +92,16 @@ dequeue_message( message_queue *queue ) {
   queue->divider = next;
   queue->length--;
 
+  pthread_rwlock_unlock(&(queue->queue_lock));
+  
   return message;
 }
 
 
 buffer *
 peek_message( message_queue *queue ) {
+
+  pthread_rwlock_rdlock(&(queue->queue_lock));
   if ( queue == NULL ) {
     die( "queue must not be NULL" );
   }
@@ -98,11 +110,16 @@ peek_message( message_queue *queue ) {
     return NULL;
   }
 
+  pthread_rwlock_unlock(&(queue->queue_lock));
+
   return queue->divider->next->data;
 }
 
 
-void foreach_message_queue( message_queue *queue, bool function( buffer *message, void *user_data ), void *user_data ) {
+void 
+foreach_message_queue( message_queue *queue, bool function( buffer *message, void *user_data ), void *user_data ) {
+
+  pthread_rwlock_rdlock(&(queue->queue_lock));
   if ( queue->divider == queue->tail ) {
     return;
   }
@@ -114,4 +131,5 @@ void foreach_message_queue( message_queue *queue, bool function( buffer *message
       break;
     }
   }
+  pthread_rwlock_unlock(&(queue->queue_lock));
 }

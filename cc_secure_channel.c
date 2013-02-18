@@ -1,6 +1,115 @@
 #include "cc_secure_channel.h"
 
 static int
+cc_select_handler(sw_info* cc_sw_info,buffer* buf,uint16_t type)
+{
+	int ret;
+	switch ( header->type ) {
+  	// Immutable messages.
+  		case OFPT_HELLO:
+   			ret = ofpmsg_recv_hello( sw_info, buf );
+   			break;
+	
+  		case OFPT_ERROR:
+   			ret = ofpmsg_recv_error( sw_info, buf );
+   			break;
+
+  		case OFPT_ECHO_REQUEST:
+    		ret = ofpmsg_recv_echorequest( sw_info, buf );
+    		break;
+
+  		case OFPT_ECHO_REPLY:
+   			ret = ofpmsg_recv_echoreply( sw_info, buf );
+    		break;
+
+  		case OFPT_VENDOR:
+    		ret = ofpmsg_recv_vendor( sw_info, buf );
+    		break;
+
+  		// Switch configuration messages.
+  		case OFPT_FEATURES_REPLY:
+    		ret = ofpmsg_recv_featuresreply( sw_info, buf );
+    		break;
+
+  		case OFPT_GET_CONFIG_REPLY:
+    		ret = ofpmsg_recv_getconfigreply( sw_info, buf );
+    		break;
+
+  		// Asynchronous messages.
+  		case OFPT_PACKET_IN:
+    		ret = ofpmsg_recv_packetin( sw_info, buf );
+    		break;
+
+  		case OFPT_FLOW_REMOVED:
+    		ret = ofpmsg_recv_flowremoved( sw_info, buf );
+    		break;
+
+  		case OFPT_PORT_STATUS:
+    		ret = ofpmsg_recv_portstatus( sw_info, buf );
+    		break;
+
+  		// Statistics messages.
+  		case OFPT_STATS_REPLY:
+    		ret = ofpmsg_recv_statsreply( sw_info, buf );
+    		break;
+
+  		// Barrier messages.
+  		case OFPT_BARRIER_REPLY:
+    		ret = ofpmsg_recv_barrierreply( sw_info, buf );
+    		break;
+
+  		// Queue Configuration messages.
+  		case OFPT_QUEUE_GET_CONFIG_REPLY:
+    		ret = ofpmsg_recv_queue_getconfigreply( sw_info, buf );
+    		break;
+
+  		default:
+    		assert( 0 );
+    		break;
+  }
+
+  return ret;
+}
+
+
+static int
+cc_ofpmsg_handle(sw_info* cc_sw_info,buffer* buf)
+{
+	int ret;
+	struct ofp_header *header;
+	uint16_t error_type,error_code;
+
+	log_info_for_cc("get a msg from the secure channel");
+
+	header = buf->data;
+	ret = validate_openflow_message(buf);
+	if ( ret != 0 ) {
+    	perror( "Invalid openflow message. type:%d, errno:%d", header->type, ret );
+
+    	error_type = OFPET_BAD_REQUEST;
+    	error_code = OFPBRC_BAD_TYPE;
+    	get_error_type_and_code( header->type, ret, &error_type, &error_code );
+    	debug( "Validation error. type %u, errno %d, error type %u, error code %u",
+           header->type, ret, error_type, error_code );
+
+    	cc_send_err_msg( sw_info, error_type, error_code, buf );
+    	free_buffer( buf );
+
+    	return CC_ERROR;
+	}
+
+	ret = cc_select_handler(cc_sw_info,buf,header->type)
+	if(ret < 0)
+	{
+		perror("handler ofmsg error");
+		log_err_for_cc("handlerofmsg error!");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;
+}
+
+static int
 cc_recv_from_secure_channel(sw_info *cc_sw_info,void* op_data)
 {
 	size_t remaining_length = CC_RECV_BUFFER_SIZE - cc_sw_info->recv_queue->length ;
@@ -45,7 +154,6 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info,void* op_data)
 		}
 		/*input the msg in queue*/
 		enqueue_message(cc_sw_info->recv_queue,tmp_buff);
-		
 	}	
 	
 	return CC_SUCCESS;
@@ -60,7 +168,7 @@ cc_handler_message_from_secure_channel(sw_info* cc_sw_info)
 
 	while((msg = dequeue_message( sw_info->recv_queue))
 	{
-		ret = ofpmsg_recv(sw_info,msg);
+		ret = cc_ofpmsg_handle(sw_info,msg);
 		if(ret<0)
 		{
 			perror("failed to handle message to applocation.");

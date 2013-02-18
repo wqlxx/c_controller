@@ -18,32 +18,31 @@ typedef struct {
 */
 
 static size_t
-front_length_of( buffer *buff ) {
-  assert( buff!= NULL );
-
-  return ( size_t ) ( ( char * ) buff->data - ( char * ) buff->top );
+front_length_of( buffer *buf )
+{
+  return ( size_t ) ( ( char * ) buf->data - ( char * ) buf->top );
 }
 
 
 static bool
-already_allocated( buffer *buff, size_t length ) {
-  assert( buff != NULL );
+already_allocated( buffer *buf, size_t length )
+{
 
-  size_t required_length = ( size_t ) front_length_of( buff ) + buff->length + length;
+  size_t required_length = ( size_t ) front_length_of( buf ) + buf->length + length;
 
-  return ( buff->real_length >= required_length );
+  return ( buf->real_length >= required_length );
 }
 
 
 static buffer *
-alloc_new_data( buffer* buff, size_t length ) {
-  assert( buff != NULL );
-
-  buff->data = (void*)malloc( length );
-  buff->length = length;
-  buff->top = buff->data;
-  buff->real_length = length;
-  buff->tail = buff->data + length - 1;
+alloc_new_data(buffer* buf,size_t length = dlf_length)
+{
+  
+  buf->data= (void*)malloc( length );
+  buf->length = length;
+  buf->top = buf->data;
+  buf->real_length = length;
+  buf->tail = buf->data + length;
 
   pthread_mutexattr_t attr;
   pthread_mutexattr_init( &attr );
@@ -51,57 +50,88 @@ alloc_new_data( buffer* buff, size_t length ) {
   new_buf->mutex = xmalloc( sizeof( pthread_mutex_t ) );
   pthread_mutex_init( buff->mutex, &attr );
 
-  return buff;
-}
-
-static buffer *
-append_front( buffer* buff, size_t length ) {
-  assert( buff != NULL );
-
-  size_t new_length = front_length_of( buff ) + buff->length + length;
-  void *new_data = malloc( new_length );
-  memcpy( ( char * ) new_data + front_length_of( buff ) + length, buff->data, buff->length );
-  free( buff->top );
-
-  buff->data = ( char * ) new_data + front_length_of( buff );
-  buff->real_length = new_length;
-  buff->top = new_data;
-  buff->tail = new_data + new_length - 1;
-
-  return buff;
+  return buf;
 }
 
 
 static buffer *
-append_back( buffer* buff, size_t length ) {
-  assert( buff != NULL );
+append_front( buffer* buf, size_t length ) 
+{
 
-  size_t new_length = front_length_of( buff ) + buff->length + length;
+  size_t new_length = front_length_of( buf ) + buf->length + length;
   void *new_data = malloc( new_length );
-  memcpy( ( char * ) new_data + front_length_of( buff ), buff->data, buff->length );
-  free( buff->top );
+  if(new_data == NULL)
+  {
+  	return NULL;
+  }
+	
+  memcpy( ( char * ) new_data + front_length_of( buf ) + length, buf->data, buf->length );
+  free( buf->top );
 
-  buff->data = ( char * ) new_data + front_length_of( buff );
-  buff->real_length = new_length;
-  buff->top = new_data;
+  buf->data = ( char * ) new_data + front_length_of( buf );
+  buf->real_length = new_length;
+  buf->top = new_data;
+  buf->tail = new_data + new_length - 1;
 
-  return buff;
+  return buf;
+}
+
+
+static buffer *
+append_back( buffer* buf, size_t length )
+{
+
+  size_t new_length = front_length_of( buf ) + buf->length + length;
+  void *new_data = malloc( new_length );
+  if(new_data == NULL)
+  {
+  	return NULL;
+  }
+  memcpy( ( char * ) new_data + front_length_of( buf ), buf->data, buf->length );
+  free( buf->top );
+
+  buf->data = ( char* ) new_data + front_length_of( buf );
+  buf->real_length = new_length;
+  buf->top = ( char* )new_data;
+  buf->tail = ( char* )new_data + new_length - 1;
+  
+  return buf;
+}
+
+
+buffer*
+alloc_empty_data()
+{
+	buffer* buf = (buffer*)malloc(sizeof(buffer));
+	buf->data = NULL;
+	buf->top = buf->data;
+	buf->tail = buf->data;
+	buf->length = 0;
+	buf->real_length = 0;
+
+	pthread_mutexattr_t attr;
+ 	pthread_mutexattr_init( &attr );
+  	pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE_NP );
+  	buf->mutex = malloc( sizeof( pthread_mutex_t ) );
+  	pthread_mutex_init( buf->mutex, &attr );
+
+	return buf;
+}
+
+buffer *
+alloc_buffer() 
+{
+  return ( buffer * ) alloc_empty_data();
 }
 
 
 buffer *
-alloc_buffer() {
-  return ( buffer * ) alloc_new_data();
-}
+alloc_buffer_with_length( size_t length ) 
+{
 
-
-buffer *
-alloc_buffer_with_length( size_t length ) {
-  assert( length != 0 );
-
-  buffer *new_buf = xcalloc( 1, sizeof( buffer ) );
+  buffer *new_buf = malloc( sizeof( buffer ) );
   new_buf->data = malloc( length );
-  new_buf->length = 0;
+  new_buf->length = length;
   new_buf->top = new_buf->data;
   new_buf->real_length = length;
   new_buf->length = length;
@@ -119,12 +149,11 @@ alloc_buffer_with_length( size_t length ) {
 
 void
 free_buffer( buffer *buf ) {
-  assert( buf != NULL );
   
   pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
   buffer *delete_buf = ( buffer * ) buf;
   if ( delete_buf->top != NULL ) {
-    xfree( delete_buf->top );
+    free( delete_buf->top );
   }
   pthread_mutex_unlock( delete_buf->mutex );
   pthread_mutex_destroy( delete_buf->mutex );
@@ -134,87 +163,77 @@ free_buffer( buffer *buf ) {
 
 
 void *
-append_front_buffer( buffer *buf, size_t length ) {
-  assert( buf != NULL );
-  assert( length != 0 );
+append_front_buffer( buffer *buf, size_t length ) 
+{
 
-  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
+  pthread_mutex_lock( buf->mutex );
 
-  buffer* b = ( buffer * ) buf;
-
-  if ( buff->top == NULL ) {
-    alloc_new_data( buff, length );
-    pthread_mutex_unlock( buff->mutex );
-    return buff->data;
+  if ( buf->top == NULL ) {
+    alloc_new_data( buf, length );
+    pthread_mutex_unlock( buf->mutex );
+    return buf->data;
   }
   
-  if ( already_allocated( b, length ) ) {
-    memmove( ( char * ) b->data + length, b->data, b->length );
-    memset( b->data, 0, length );
+  if ( already_allocated( buf, length ) ) {
+    memmove( ( char * ) buf->data + length, buf->data, buf->length );
+    memset( buf->data, 0, length );
   }
   else {
-    append_front( b, length );
+    append_front( buf, length );
   }
-  b->length += length;
+  //buf->length += length;
 
-  pthread_mutex_unlock( buff->mutex );
+  pthread_mutex_unlock( buf->mutex );
 
-  return b->data;
+  return buf->data;
 }
 
 
 void *
-remove_front_buffer( buffer *buf, size_t length ) {
-  assert( buf != NULL );
-  assert( length != 0 );
+remove_front_buffer( buffer *buf, size_t length )
+{
 
-  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
+  pthread_mutex_lock( buf->mutex );
 
-  buffer* b = ( buffer * ) buf;
-  assert( buff->length >= length );
+  buf->data = ( char * ) buf->data + length;
+  buf->length -= length;  
 
-  buff->data = ( char * ) buff->data + length;
-  buff->length -= length;
+  pthread_mutex_unlock( buf->mutex );
 
-  pthread_mutex_unlock( buff->mutex );
-
-  return buff->data;
+  return buf->data;
 }
 
 
 void *
-append_back_buffer( buffer *buf, size_t length ) {
-  assert( buf != NULL );
-  assert( length != 0 );
+append_back_buffer( buffer *buf, size_t length ) 
+{
 
-  pthread_mutex_lock( ( ( buffer * ) buf )->mutex );
+  pthread_mutex_lock( buf->mutex );
 
-  buffer* b = ( buffer * ) buf;
-
-  if ( buff->real_length == 0 ) {
-    alloc_new_data( buff, length );
-    pthread_mutex_unlock( buff->mutex );
-    return ( char * ) buff->data;
+  if ( buf->real_length == 0) {
+    alloc_new_data( buf, length );
+    pthread_mutex_unlock( buf->mutex );
+    return ( char * ) buf->data;
   }
 
-  if ( !already_allocated( buff, length ) ) {
-    append_back( buff, length );
+  if ( !already_allocated( buf, length ) ) {
+    append_back( buf, length );
   }
 
-  void *appended = ( char * ) buff->data + buff->length;
-  buff->length += length;
+  //void *appended = ( char * ) buf->data + buf->length;
+  buf->length += length;
 
-  pthread_mutex_unlock( buff->mutex );
+  pthread_mutex_unlock( buf->mutex );
 
-  return appended;
+  return buf->data;
 }
 
 
 buffer *
-duplicate_buffer( const buffer *buf ) {
-  assert( buf != NULL );
+duplicate_buffer( const buffer *buf)
+{
 
-  pthread_mutex_lock( ( ( const buffer * ) buf )->mutex );
+  pthread_mutex_lock( buf->mutex );
 
   buffer *new_buffer = alloc_buffer();
   const buffer *old_buffer = ( const buffer * ) buf;
@@ -227,32 +246,20 @@ duplicate_buffer( const buffer *buf ) {
   alloc_new_data( new_buffer, old_buffer->real_length );
   memcpy( new_buffer->top, old_buffer->top, old_buffer->real_length );
 
-  new_buffer->public.length = old_buffer->public.length;
-  new_buffer->public.user_data = old_buffer->public.user_data;
-  new_buffer->public.user_data_free_function = NULL;
-  new_buffer->public.data = ( char * ) ( new_buffer->public.data ) + front_length_of( old_buffer );
+  new_buffer->length = old_buffer->length;
+  new_buffer->data = ( char * ) ( new_buffer->data ) + front_length_of( old_buffer );
+  new_buffer->real_length = old_buffer->real_length;
+  new_buffer->tail = old_buffer->tail;
 
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init( &attr );
+  pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE_NP );
+  new_buffer->mutex = malloc( sizeof( pthread_mutex_t ) );
+  pthread_mutex_init( new_buffer->mutex, &attr );
+  
   pthread_mutex_unlock( old_buffer->mutex );
 
   return ( buffer * ) new_buffer;
 }
 
 
-void
-dump_buffer( const buffer *buf, void dump_function( const char *format, ... ) ) {
-  assert( dump_function != NULL );
-
-  pthread_mutex_lock( ( ( const buffer * ) buf )->mutex );
-
-  char *hex = xmalloc( sizeof( char ) * ( buf->length * 2 + 1 ) );
-  uint8_t *datap = buf->data;
-  char *hexp = hex;
-  for ( unsigned int i = 0; i < buf->length; i++, datap++, hexp += 2 ) {
-    snprintf( hexp, 3, "%02x", *datap );
-  }
-  ( *dump_function )( "%s", hex );
-
-  xfree( hex );
-
-  pthread_mutex_unlock( ( ( const buffer * ) buf )->mutex );
-}

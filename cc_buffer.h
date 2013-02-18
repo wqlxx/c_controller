@@ -16,6 +16,7 @@ typedef struct buffer {
   //void ( *user_data_free_function )( struct buffer *buffer );
 } buffer;
 
+#define dlf_length sizeof(buffer)
 
 buffer *alloc_buffer( void );
 buffer *alloc_buffer_with_length( size_t length );
