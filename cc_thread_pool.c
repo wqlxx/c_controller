@@ -1,12 +1,7 @@
-#include "cc_thread_pool.h"
-
-#define BUFFER_SIZE 1024  
-  
-int pool_add_worker (void *(*process) (void *arg), void *arg);   
-void *thread_routine (void *arg);   
-  
-static CThread_pool *pool = NULL;   
-void pool_init (int max_thread_num)//初始化线程池   
+poolinclude "cc_thread_pool.h"  
+    
+void
+pool_init (CThread_pool* pool,int max_thread_num)//初始化线程池   
 {   
      pool = (CThread_pool *) malloc (sizeof (CThread_pool));   
   
@@ -24,11 +19,12 @@ void pool_init (int max_thread_num)//初始化线程池
      int i = 0;   
      for (i = 0; i < max_thread_num; i++)   
      {   
-         pthread_create (&(pool->threadid[i]), NULL, thread_routine,NULL);   
+         pthread_create (&(pool->threadid[i]), NULL, thread_routine,pool);   
      }   
 }   
   
-int pool_add_worker (void *(*process) (void *arg), void *arg)   
+int
+pool_add_worker (CThread_pool* pool,void *(*process) (void *arg), void *arg)   
 {   
      CThread_worker *newworker =(CThread_worker *) malloc (sizeof (CThread_worker));   
      newworker->process = process;   
@@ -58,7 +54,8 @@ int pool_add_worker (void *(*process) (void *arg), void *arg)
     return 0;   
 }   
   
-int pool_destroy ()   
+int
+pool_destroy (CThread_pool* pool,)   
 {   
     if (pool->shutdown)   
         return -1;/*防止两次调用*/  
@@ -88,8 +85,12 @@ int pool_destroy ()
      pool=NULL;   
     return 0;   
 }   
-void * thread_routine (void *arg)   
+
+void*
+thread_routine (void *arg)   
 {   
+	 CThread_pool* pool = (CThread_pool*)arg;
+	 
      printf ("starting thread 0x%x\n", pthread_self ());   
      while (1)   
      {   

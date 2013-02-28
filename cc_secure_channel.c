@@ -105,9 +105,33 @@ cc_ofpmsg_handle(sw_info* cc_sw_info,buffer* buf)
 		log_err_for_cc("handlerofmsg error!");
 		return CC_ERROR;
 	}
-
+	
 	return CC_SUCCESS;
 }
+
+/*
+unsigned long
+cc_read(int fd,char* buf,size_t size)
+{
+	ssize_t read_length = read(fd,buf,size);
+	if( read_length < 0)
+	{
+		if( errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+		{
+			log_warning_for_cc("");
+			return CC_ERROR;
+		}
+		perror("receive error");
+		return CC_ERROR;
+	}
+
+	if( read_length == 0 )
+	{
+		
+	}
+	
+}
+*/
 
 static int
 cc_recv_from_secure_channel(sw_info *cc_sw_info,void* op_data)
@@ -135,7 +159,7 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info,void* op_data)
 	}
 
 	/*input the msg in queue*/
-	enqueue_message(cc_sw_info->recv_queue,tmp_buff);
+	//enqueue_message(cc_sw_info->recv_queue,tmp_buff);
 	
 	size_t read_total = 0;
 	while( tmp_recv_buff_length >= sizeof(struct ofp_header)) {
@@ -166,6 +190,8 @@ cc_handler_message_from_secure_channel(sw_info* cc_sw_info)
 	int errors = 0;
 	buffer *msg;
 
+	
+
 	while((msg = dequeue_message( sw_info->recv_queue))
 	{
 		ret = cc_ofpmsg_handle(sw_info,msg);
@@ -193,6 +219,14 @@ cc_secure_channel_read(sw_info *cc_sw_info)
 
 	if(cc_sw_info->recv_queue->length > 0)
 	{
+		ret = pool_add_worker(cc_handler_message_from_secure_channel,cc_sw_info);
+		if( ret == CC_ERROR )
+		{
+			log_err_for_cc("Use thread in thread pool failed");
+			return CC_ERROR;
+		}
+	}
+		/*
 		ret = cc_handler_message_from_secure_channel(cc_sw_info);
 		if(ret < 0)
 		{
@@ -200,10 +234,29 @@ cc_secure_channel_read(sw_info *cc_sw_info)
 			perror("handle msg error!");
 			return CC_ERROR;
 		}
+		*/
 	}
 	
 	return CC_SUCCESS;
 }
+
+
+static int
+cc_append_to_writev_args( buffer *message, void *user_data ) {
+  cc_writev_args *args = user_data;
+
+  args->iov[ args->iovcnt ].iov_base = message->data;
+  args->iov[ args->iovcnt ].iov_len = message->length;
+  args->iovcnt++;
+
+  if ( args->iovcnt >= IOV_MAX ) {
+    return CC_ERROR;
+  }
+
+  return CC_SUCCESS;
+}
+
+
 
 static int
 cc_send_to_secure_channel(sw_info* cc_sw_info)
@@ -228,7 +281,6 @@ cc_send_to_secure_channel(sw_info* cc_sw_info)
 			//write( cc_sw_info->cc_switch->cc_socket->fd,msg,sizeof(msg));
 			continue;
 		}
-
 		buffer* buf = dequeue_message(message_queue * queue);
 		free_buffer(buf);
 	}

@@ -44,16 +44,18 @@
 
 //struct cc_switch_proc cc_switch_proc={.num_sw=0};
 struct cc_socket listen_socket;
+sw_info global_sw_table[CC_MAX_NUM_SWITCH];
 
 int main(int argc,char **argv)
 {
 
 	parse_argv(argc,argv);
 	signal(SIGPIPE, SIG_IGN);
-	cc_init_of(&listen_socket);
+	//cc_init_of(&listen_socket);
+	cc_init_listenfd(&listen_socket);
 	while(1)
 	{
-		
+		cc_recv_conn_from_switch(&listen_socket);
 	}
 	return 0;
 }

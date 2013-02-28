@@ -4,7 +4,7 @@ static inline uint32_t
 make_inet_mask(uint8_t len)
 {
     return (~((1 << (32 - (len))) - 1));
-\}
+}
 
 char*
 cc_dump_flow(struct flow* flow,uint32_t wildcards)
@@ -155,17 +155,17 @@ cc_send_err_msg(sw_info* cc_sw_info,uint16_t type,uint16_t code,buffer* b)
 
 
 static int
-cc_recv_err_msg(sw_info* cc_sw_info,buffer* b)
+cc_recv_err_msg(sw_info* cc_sw_info,buffer* buf)
 {
 	
-	struct ofp_error_msg *ofp_err = (void*)(b->data);
+	struct ofp_error_msg *ofp_err = (void*)(buf->data);
 	struct flow err_flow;
 	char *str;
 	struct ofp_flow_mod *ofm = (void*)(ofp_err->data);
 	uint32_t wildcards = ofm->match.wildcards;
 
 	printf("%s,dpid:0x%llx sent error msg,type %hu code %hu",FUNC_NAME,
-		    sw->DPID,ntohs(ofp_err->type),ntohs(ofp_err->code));
+		    cc_sw_info->cc_switch->dpid,ntohs(ofp_err->type),ntohs(ofp_err->code));
 
 	switch(ntohs(ofp_err->type))
 	{
@@ -201,22 +201,20 @@ cc_recv_err_msg(sw_info* cc_sw_info,buffer* b)
 
 
 static int
-cc_recv_echo_request(sw_info* cc_sw_info,buffer* data)
+cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf)
 {
-	struct ofp_header *header = data->data;
+	struct ofp_header *header = buf->data;
 	uint32_t transaction_id = htonl(header->xid);
 	uint16_t length = htons( header->length);
 
-	if(
-
+	cc_sw_info->xid = transaction_id;
+	//remove_front_buffer(data,sizeof(struct ofp_header));
 	buffer* body = NULL;
 	if((length - sizeof(struct ofp_header))>0)
 	{
-		body = duplicate_buffer(data);
+		body = duplicate_buffer(buf);
 		remove_front_buffer(body,sizeof(struct ofp_header));
-	}
-
-	
+	}	
 
 	if( body != NULL )
 		free_buffer(body);
@@ -228,47 +226,114 @@ cc_recv_echo_request(sw_info* cc_sw_info,buffer* data)
 static int
 cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 {
-	
+	/*Nothing to do*/
 }
-
 
 static int
-cc_send_echo_request(sw_info* cc_sw_info)
-{
-
-}
-
-
-static int
-cc_send_echo_reply(sw_info* cc_sw_info,uint32_t xid)
+cc_process_phy_port(sw_info* cc_sw_info, struct ofp_phy_port* port, uint8_t reason)
 {
 	
+	switch(reason){
+			
+		case OFPPR_DELETE:
+			cc_sw_info->cc_switch.sw_port[port->port_no].valid = 0;
+
+		case OFPPR_MODIFY:
+			
+		case OFPPR_ADD:
+			cc_sw_info->cc_switch.sw_port[port->port_no].port= *port;
+			cc_sw_info->cc_switch.sw_port[port->port_no].valid = 1;
+		default:
+			return CC_ERROR;
+	}
+	return CC_SUCCESS;
+			
 }
 
-
 static void
-cc_recv_features_reply(sw_info* cc_sw_info,buffer* b)
+cc_recv_features_reply(sw_info* cc_sw_info,buffer* buf)
 {
+	int ret;
+	size_t n_ports;
+	struct ofp_switch_features *feat_rep;
+	uint64_t datapath_id;
+
+	log_info_for_cc("get the feature reply from the switch");
+	feat_rep = (void*)buf->data;
+
+	cc_sw_info->cc_switch->dpid		 = ntohll(feat_rep->datapath_id);
+	cc_sw_info->cc_switch->version 	 = ntohl(feat_rep->header->version);
+	cc_sw_info->cc_switch->n_buffers = ntohs(feat_rep->n_buffers);
+	cc_sw_info->cc_switch->actions   = ntohl(feat_rep->actions);
+	cc_sw_info->cc_switch->capabilities = ntohl(feat_rep->capabilities);
 	
-}
-
-static void
-cc_recv_packet_in(sw_info* cc_sw_info,buffer* b)
-{
+	n_ports = ((ntohs(feat_rep->header.length)
+                - offsetof(struct ofp_switch_features, ports))
+            / sizeof *feat_rep->ports);
+	if(n_ports > CC_MAX_PORT)
+	{
+		log_err_for_cc("the port num of switch is out of range of the max mount");
+		n_ports = n_ports < CC_MAX_PORT ? n_ports : CC_MAX_PORT; 
+	}
 	
+	for(int i = 0; i < n_ports; i++)
+	{
+		cc_process_phy_port(cc_sw_info,&feat_rep->ports[i],OFPPR_ADD);
+	}
+
+	free_buffer(buf);
+	return ;
 }
 
 static void
-cc_flow_removed(sw_info* cc_sw_info,buffer* b)
+cc_recv_packet_in(sw_info* cc_sw_info,buffer* buf)
 {
-
+	log_info_for_cc("recv packet-in msg from switch");
+	//cc_app_handler_run();
+	return;
 }
 
 static void
-cc_recv_port_status(sw_info* cc_sw_info,buffer* b)
+cc_recv_port_status(sw_info* cc_sw_info, buffer* buf)
 {
-
+	struct ofp_port_status *ops = (void*)(buf->data);
+	cc_process_phy_port(cc_sw_info,&ops->desc,ops->reason);
+	//cc_app_handler_run();
+	return;
 }
+
+static void
+cc_flow_removed(sw_info* cc_sw_info,buffer* buf)
+{
+	struct flow                 flow;
+    struct ofp_flow_removed     *ofm = (void *)(b->data);
+    struct of_flow_mod_params   fl_parms;
+
+    memset(&fl_parms, 0, sizeof(fl_parms));
+    memset(&flow, 0, sizeof(flow));
+
+    fl_parms.wildcards = ofm->match.wildcards;
+    fl_parms.prio = ntohs(ofm->priority);
+
+    flow.in_port = ofm->match.in_port;
+    memcpy(flow.dl_src, ofm->match.dl_src, sizeof ofm->match.dl_src);
+    memcpy(flow.dl_dst, ofm->match.dl_dst, sizeof ofm->match.dl_dst);
+    flow.dl_vlan = ofm->match.dl_vlan;
+    flow.dl_type = ofm->match.dl_type;
+    flow.dl_vlan_pcp = ofm->match.dl_vlan_pcp;
+    flow.nw_src = ofm->match.nw_src;
+    flow.nw_dst = ofm->match.nw_dst;
+    flow.nw_proto = ofm->match.nw_proto;
+    flow.tp_src = ofm->match.tp_src;
+    flow.tp_dst = ofm->match.tp_dst;
+
+    fl_parms.flow = &flow;    
+    fl_parms.tbl_idx = C_RULE_FLOW_TBL_DFL;
+    
+    //c_signal_app_event(sw, b, C_FLOW_REMOVED, NULL, &fl_parms);
+    return;
+}
+
 
 struct of_handler of_handlers[] __aligned = {
     cc_recv_hello_msg,              /* OFPT_HELLO */
