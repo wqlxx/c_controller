@@ -1,7 +1,7 @@
 /*
- * Timer events and callbacks.
+ * OpenFlow Switch Manager
  *
- * Author: Yasuhito Takamiya <yasuhito@gmail.com>
+ * Author: Kazushi SUGYO
  *
  * Copyright (C) 2008-2012 NEC Corporation
  *
@@ -20,27 +20,41 @@
  */
 
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef CC_XID_H
+#define CC_XID_H 1
+
+#include <sys/times.h>
+#include "cc_basic.h"
 
 
-#include <stdbool.h>
-#include <time.h>
+uint32_t cc_generate_xid( sw_info* );
+
+xid_entry* cc_allocate_xid_entry( uint32_t , char *, int);
+
+static void cc_free_xid_entry(xid_entry *);
+
+void cc_init_xid_table( sw_info* );
+
+void cc_finalize_xid_table( sw_info* );
+
+uint32_t cc_insert_xid_entry( uint32_t , char *);
+
+void cc_delete_xid_entry( xid_entry *);
+
+xid_entry *cc_lookup_xid_entry( uint32_t );
+
+static void cc_dump_xid_entry(xid_entry *);
+
+void cc_dump_xid_table( sw_info* );
 
 
-typedef void ( *timer_callback )( void *user_data );
+#endif // CC_XID_H
 
 
-extern bool ( *init_timer )( void );
-extern bool ( *finalize_timer )( void );
-
-extern bool ( *add_timer_event_callback )( struct itimerspec *interval, timer_callback callback, void *user_data );
-extern bool ( *add_periodic_event_callback )( const time_t seconds, timer_callback callback, void *user_data );
-
-extern bool ( *delete_timer_event )( timer_callback callback, void *user_data );
-
-extern void ( *execute_timer_events )( int *next_timeout_usec );
-
-
-#endif // TIMER_H
+/*
+ * Local variables:
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * End:
+ */
 

@@ -1,5 +1,5 @@
 /*
- * cc_of_msg_action functions.
+ * cc_of_msg_handler functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,10 +17,30 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef CC_MAIN_H
-#define CC_MAIN_H 1
 
-#include "cc_init_of.h"
-#include "cc_log.h"
+#ifndef CC_OF_MSG_HANDLER_H
+#define CC_OF_MSG_HANDLER_H 1
+
+#include "cc_of_msg_send.h"
+#include "cc_xid.h"
+#include "cc_basic.h"
+
+struct msg_for_app {
+	buffer* buf;
+	uint64_t dpid;
+};
+typedef struct msg_for_app msg_for_app;
+
+
+int cc_event_recv_hello(sw_info*, buffer*);
+
+int cc_event_recv_feature_reply(sw_info*, uint32_t);
+
+int cc_event_recv_echo_reply(sw_info*, buffer*);
+
+int cc_evnet_recv_echo_request(sw_info*, uint32_t, buffer*);
+
+int cc_event_send_msg(buffer* );
+
 
 #endif

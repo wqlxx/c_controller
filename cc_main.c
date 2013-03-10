@@ -53,6 +53,7 @@ int main(int argc,char **argv)
 	signal(SIGPIPE, SIG_IGN);
 	//cc_init_of(&listen_socket);
 	cc_init_listenfd(&listen_socket);
+	cc_init_app();
 	while(1)
 	{
 		cc_recv_conn_from_switch(&listen_socket);

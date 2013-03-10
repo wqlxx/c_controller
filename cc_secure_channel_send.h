@@ -1,5 +1,5 @@
 /*
- * cc_of_msg_action functions.
+ * cc_secure_channel_send functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,10 +17,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef CC_MAIN_H
-#define CC_MAIN_H 1
 
-#include "cc_init_of.h"
-#include "cc_log.h"
+#ifndef CC_SECURE_CHANNEL_SEND_H
+#define CC_SECURE_CHANNEL_SEND_H 1
+
+#include "cc_basic.h"
 
 #endif

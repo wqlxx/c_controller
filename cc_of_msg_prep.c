@@ -443,7 +443,9 @@ cc_create_hello(uint32_t xid)
 	return cc_create_header(xid,OFPT_HELLO, sizeof( struct ofp_header ));
 }
 
-
+/* param: xid is the genereate with rand
+*  param: buf is used to calculate the len except the ofp header
+*/
 static buffer*
 cc_create_echo_request(uint32_t xid, buffer* buf)
 {
@@ -455,6 +457,7 @@ cc_create_echo_request(uint32_t xid, buffer* buf)
 	buffer* echo_requset = cc_create_header(xid, OFPT_ECHO_REQUEST,  ( uint16_t ) ( sizeof( struct ofp_header ) + data_length ) );
 	if( echo_requset == NULL )
 	{
+		return NULL;
 	}
 
 	if( data_length > 0 )

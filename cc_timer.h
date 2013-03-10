@@ -1,5 +1,5 @@
 /*
- * cc_of_msg_action functions.
+ * cc_time functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,10 +17,15 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef CC_MAIN_H
-#define CC_MAIN_H 1
+#ifndef CC_TIMER_H
+#define CC_TIMER_H 1
 
-#include "cc_init_of.h"
-#include "cc_log.h"
+#include <sys/select.h>
+#include <sys/time.h>
+#include <time.h>
+
+/* ECHO TIMEOUT has no exactly define,In trema ,i see it is 60s*/
+#define CC_ECHO_MAX_INTERVAL 10 //10 use to as a connection checker
+#define CC_FEATURE_REPLY_MAX_INTERVAL 10
 
 #endif

@@ -106,8 +106,27 @@ cc_init_of(struct cc_socket* listen_socket)
 	
 }
 
-static int
-cc_init_app()
+
+static void
+cc_app_init(const char** app_name,int num)
 {
-	/*reservered for application*/
+	int ret;
+	int i;
+	
+	for(i = 0; i < num; i++)
+	{
+		ret = cc_app_register(*app_name);
+		if(ret < 0)
+		{
+			log_err_for_cc("register app error!");
+		}
+	}
 }
+
+
+void
+cc_app_run(struct cc_app* cc_app)
+{
+	
+}
+

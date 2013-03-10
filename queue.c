@@ -1,126 +1,176 @@
 #include <assert.h>
-#include "wrapper.h"
 #include "message_queue.h"
 
 
 message_queue *
 create_message_queue( void ) {
-  message_queue *new_queue = (message_queue *)malloc( sizeof( message_queue ) );
-  new_queue->head =(message_queue_element*)malloc( sizeof( message_queue_element ) );
-  new_queue->head->data = NULL;
-  new_queue->head->next = NULL;
-  new_queue->divider = new_queue->tail = new_queue->head;
-  new_queue->length = 0;
-
-  return new_queue;
+	message_queue *new_queue = (message_queue *)malloc( sizeof( message_queue ) );
+    new_queue->head =(message_queue_element*)malloc( sizeof( message_queue_element ) );
+    new_queue->head->data = NULL;
+    new_queue->head->next = NULL;
+    new_queue->divider = new_queue->tail = new_queue->head;
+    new_queue->length = 0;
+	pthread_mutex_init(new_queue->queue_lock, NULL);
+	
+  	return new_queue;
 }
 
 
-bool
+/*
+ * don't use it in the dequeue_message
+ * we should use it after send msg
+ */
+int
+free_message_element(message_queue_element * element)
+{
+	free(element);
+	return CC_SUCCESS;
+}
+
+
+int
 delete_message_queue( message_queue *queue ) {
 
-  pthread_rwlock_wrlock(&(queue->queue_lock));
-  if ( queue == NULL ) {
-    die( "queue must not be NULL" );
-  }
+	message_queue_element* element;
+  	pthread_mutex_lock(&(queue->queue_lock));
+  	if ( queue == NULL ) {
+    	perror( "queue must not be NULL" );
+		pthread_mutex_unlock(&(queue->queue_lock));
+		return CC_SUCCESS;
+  	}
 
-  while ( queue->head != NULL ) {
-    message_queue_element *element = queue->head;
-    if ( queue->head->data != NULL ) {
-      free_buffer( element->data );
-    }
-    queue->head = queue->head->next;
-    free( element );
-  }
-  pthread_rwlock_unlock(&(queue->queue_lock));
-  free( queue );
+  	while ( queue->head != NULL ) {
+    	element = queue->head;
+    	if ( queue->head->data != NULL ) {
+      		free_buffer( element->data );
+    	}
+		free_message_element(element);
+    	queue->head = queue->head->next;
+    	free( element );
+ 	}
+  	pthread_mutex_unlock(&(queue->queue_lock));
+	pthread_mutex_destory(&(queue->queue_lock));
+  	free( queue );
 
-  return true;
+  	return CC_SUCCESS;
 }
 
 
 static void
-collect_garbage( message_queue *queue ) {
-  while ( queue->head != queue->divider ) {
-    message_queue_element *element = queue->head;
-    queue->head = queue->head->next;
-    free( element );
-  }
+collect_garbage( message_queue *queue ) 
+{
+	pthread_mutex_lock(&(queue->queue_lock));
+  	while ( queue->head != queue->divider ) {
+    	message_queue_element *element = (message_queue_element*)malloc(sizeof(message_queue_element));
+		element = queue->head;
+    	queue->head = queue->head->next;
+    	free_message_element( element );
+  	}
+	pthread_mutex_unlock(&(queue->queue_lock));
 }
 
 
-bool
-enqueue_message( message_queue *queue, buffer *message ) {
-
-  pthread_rwlock_wrlock(&(queue->queue_lock));
+int
+enqueue_message( message_queue *queue, buffer *buf ) 
+{
+  pthread_mutex_lock(&(queue->queue_lock));
   if ( queue == NULL ) {
-    die( "queues must not be NULL" );
+    log_err_for_cc( "queues must not be NULL" );
+	pthread_mutex_unlock(&(queue->queue_lock));
+	return CC_ERROR;
   }
-  if ( message == NULL ) {
-    die( "message must not be NULL" );
+  if ( buf == NULL ) {
+    log_err_for_cc( "message must not be NULL" );
+	pthread_mutex_unlock(&(queue->queue_lock));
+	return CC_ERROR;
   }
 
   message_queue_element *new_tail = (message_queue_element*)malloc( sizeof( message_queue_element ) );
-  new_tail->data = message;
+  new_tail->data = buf;
   new_tail->next = NULL;
 
   queue->tail->next = new_tail;
   queue->tail = new_tail;
   queue->length++;
 
-  collect_garbage( queue );
-  pthread_rwlock_unlock(&(queue->queue_lock));
+  //collect_garbage( queue );
+  pthread_mutex_unlock(&(queue->queue_lock));
   
-  return true;
+  return CC_SUCCESS;
 }
 
 
 buffer*
-dequeue_message( message_queue *queue ) {
+dequeue_message( message_queue *queue) {
 
-  pthread_rwlock_rdlock(&(queue->queue_lock));
-  if ( queue == NULL ) {
-    die( "queue must not be NULL" );
-  }
-  if ( queue->divider == queue->tail ) {
-    return NULL;
-  }
+  	buffer* buf;
+ 	message_queue_element* tmp_element;
 
-  message_queue_element *next = queue->divider->next;
-  buffer *message = next->data;
+  	pthread_mutex_lock(&(queue->queue_lock));
+  	if ( queue == NULL ) {
+    	perror( "queue must not be NULL" );	
+		pthread_mutex_unlock(&(queue->queue_lock));
+		return NULL;
+  	}
+  	if ( queue->head == queue->tail ) {
+  		pthread_mutex_unlock(&(queue->queue_lock));
+  		return NULL
+  	}
+	if( queue->length == 0 ){
+  		pthread_mutex_unlock(&(queue->queue_lock));
+		return NULL;
+	}
+#if 0
+  message_queue_element *next = queue->head->next;
+  //buffer *message = next->data;
+  buf = next->data;
   next->data = NULL; // data must be freed by caller
   queue->divider = next;
   queue->length--;
-
-  pthread_rwlock_unlock(&(queue->queue_lock));
+#endif
+	tmp_element = queue->head;
+	tmp_element->next = NULL;
+	buf = queue->head->data;
+	
+	queue->head = queue->head->next;
+	queue->length--;
+	free_message_element(tmp_element);
+  	pthread_mutex_unlock(&(queue->queue_lock));
   
-  return message;
+  //return message;
+  return buf;
 }
 
+#if 0
+int
+peek_message( message_queue *queue, buffer* buf) {
 
-buffer *
-peek_message( message_queue *queue ) {
+  	pthread_rwlock_rdlock(&(queue->queue_lock));
+  	if ( queue == NULL ) {
+    	perror( "queue must not be NULL" );	
+ 		pthread_rwlock_unlock(&(queue->queue_lock));  	
+		return CC_ERROR;
+  	}
 
-  pthread_rwlock_rdlock(&(queue->queue_lock));
-  if ( queue == NULL ) {
-    die( "queue must not be NULL" );
-  }
+  	if ( queue->head == queue->tail ) {  	
+ 		pthread_rwlock_unlock(&(queue->queue_lock));  	
+    	return CC_ERROR;
+  	}
 
-  if ( queue->divider == queue->tail ) {
-    return NULL;
-  }
+  	buf = queue->divider->next->data;
 
-  pthread_rwlock_unlock(&(queue->queue_lock));
-
-  return queue->divider->next->data;
+	pthread_rwlock_unlock(&(queue->queue_lock));
+	return CC_SUCCESS;
+  //return queue->divider->next->data;
 }
-
+#endif
 
 void 
 foreach_message_queue( message_queue *queue, bool function( buffer *message, void *user_data ), void *user_data ) {
 
-  pthread_rwlock_rdlock(&(queue->queue_lock));
+  pthread_mutex_lock(&(queue->queue_lock));
   if ( queue->divider == queue->tail ) {
+ 	pthread_mutex_unlock(&(queue->queue_lock));  	
     return;
   }
   message_queue_element *element;
@@ -131,5 +181,8 @@ foreach_message_queue( message_queue *queue, bool function( buffer *message, voi
       break;
     }
   }
-  pthread_rwlock_unlock(&(queue->queue_lock));
+  pthread_mutex_unlock(&(queue->queue_lock));
+  return;
 }
+
+

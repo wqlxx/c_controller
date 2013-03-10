@@ -1,4 +1,27 @@
+/*
+ * cc_socket functions.
+ *
+ * Author: qiang wang <wqlxx@yahoo.com.cn>
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2, as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+
 #include "cc_basic.h"
+#include "cc_socket.h"
+
 
 extern struct cc_switch_proc cc_s_p[CC_MAX_NUM_SWITCH];
 
@@ -181,6 +204,7 @@ cc_conn_accept(switch_table* cc_switch_table,sw_info* cc_sw_info)
 	socklen_t addr_len;
 	int pid;
 	int accept_fd;
+	int ret;
 
 	addr_len = sizeof(struct sockaddr_in);
 	accept_fd = accept(cc_switch_table->listen_socket->fd,(struct sockaddr*)&switch_addr,sizeof(switch_addr));
@@ -238,21 +262,43 @@ cc_conn_accept(switch_table* cc_switch_table,sw_info* cc_sw_info)
 			accept_fd = CC_ACCEPT_FD;
 		}
 
-		
+	
 		/*cc_send_hello(cc_socket);//after accept directly send heelo msg to switch?
 		 *cc_send_feature_request
 		 *cc_send_echo_request
 		 */
-
 		
 		/*FUNC:pool_int():
 		 * after fork,we create the threads in the child process,to handle thr 'read' and 'write'
 		 */
+
+		struct timeval timeout;
+		fd_set writefds;
+		fd_set readfds;
 		pool_init(CC_MAX_THREAD_NUM);
 		while(1)
 		{
-			cc_secure_channel_read(cc_sw_info);
-			cc_secure_channel_write(cc_sw_info);
+			FD_ZERO(&readfds);
+			FD_ZERO(&writefds);
+			FD_SET(accept_fd,&readfds);
+			FD_SET(accept_fd,&writefds);
+			timeout.tv_sec = CC_CONN_TIMEOUT_SEC;
+			timeout.tv_usec = CC_CONN_TIMEOUT_USEC;
+			ret = select(fd,readfds,writefds,NULL,timeout);
+			if( ret == -1 )
+			{
+				if( errno == EINTR )				
+					continue;
+				else
+					return CC_ERROR;
+			}else if( ret == 0 ){
+				continue;
+			}else{
+				if(FD_ISSET(accept_fd,&readfds))
+					cc_recv_from_secure_channel(cc_sw_info);
+				if(FD_ISSET(accept_fd,&writefds))
+					cc_flush_to_secure_channel(cc_sw_info);
+			}
 		}
 		return CC_SUCCESS;
 	}else{
