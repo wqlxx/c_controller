@@ -17,12 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-
-#include <assert.h>
-#include <pthread.h>
-#include <string.h>
 #include "hash_table.h"
-#include "wrapper.h"
 
 
 static const unsigned int default_hash_size = 65521;
@@ -96,20 +91,20 @@ create_hash( const compare_function compare, const hash_function hash ) {
  */
 hash_table *
 create_hash_with_size( const compare_function compare, const hash_function hash, unsigned int size ) {
-  private_hash_table *table = xmalloc( sizeof( private_hash_table ) );
+  private_hash_table *table = malloc( sizeof( private_hash_table ) );
 
   table->public.number_of_buckets = size;
   table->public.compare = compare ? compare : compare_atom;
   table->public.hash = hash ? hash : hash_atom;
   table->public.length = 0;
-  table->public.buckets = xmalloc( sizeof( dlist_element * ) * table->public.number_of_buckets );
+  table->public.buckets = malloc( sizeof( dlist_element * ) * table->public.number_of_buckets );
   memset( table->public.buckets, 0, sizeof( dlist_element * ) * table->public.number_of_buckets );
   table->public.nonempty_bucket_index = create_dlist();
 
   pthread_mutexattr_t attr;
   pthread_mutexattr_init( &attr );
   pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE_NP );
-  table->mutex = xmalloc( sizeof( pthread_mutex_t ) );
+  table->mutex = malloc( sizeof( pthread_mutex_t ) );
   pthread_mutex_init( table->mutex, &attr );
 
   return ( hash_table * ) table;
@@ -173,7 +168,7 @@ insert_hash_entry( hash_table *table, void *key, void *value ) {
     new_bucket( table, i );
   }
 
-  hash_entry *new_entry = xmalloc( sizeof( hash_entry ) );
+  hash_entry *new_entry = malloc( sizeof( hash_entry ) );
   new_entry->key = key;
   new_entry->value = value;
   insert_after_dlist( table->buckets[ i ], new_entry );
@@ -256,7 +251,7 @@ delete_hash_entry( hash_table *table, const void *key ) {
       hash_entry *delete_me = e->data;
       deleted = delete_me->value;
       delete_dlist_element( e );
-      xfree( delete_me );
+      free( delete_me );
       table->length--;
       break;
     }
@@ -393,19 +388,19 @@ delete_hash( hash_table *table ) {
     for ( dlist_element *e = table->buckets[ i ]->next; e != NULL; ) {
       dlist_element *delete_me = e;
       e = e->next;
-      xfree( delete_me->data );
+      free( delete_me->data );
     }
 
     delete_bucket( table, i );
   }
-  xfree( table->buckets );
+  free( table->buckets );
 
   delete_dlist( table->nonempty_bucket_index );
 
-  xfree( table );
+  free( table );
 
   pthread_mutex_unlock( mutex );
-  xfree( mutex );
+  free( mutex );
 }
 
 

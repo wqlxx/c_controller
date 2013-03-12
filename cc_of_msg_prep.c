@@ -747,7 +747,7 @@ cc_create_packet_out( const uint32_t transaction_id, const uint32_t buffer_id, c
   buffer *buffer;
   struct ofp_packet_out *packet_out;
   struct ofp_action_header *action_header;
-  list_element *action;
+  link_element *action;
 
   if ( ( data != NULL ) && ( data->length > 0 ) ) {
     data_length = ( uint16_t ) data->length;
@@ -782,7 +782,7 @@ cc_create_packet_out( const uint32_t transaction_id, const uint32_t buffer_id, c
   if ( actions_length > 0 ) {
     a = ( void * ) ( ( char * ) buffer->data + offsetof( struct ofp_packet_out, actions ) );
 
-    action = actions->list;
+    action = actions->link;
     while ( action != NULL ) {
       action_header = ( struct ofp_action_header * ) action->data;
       action_length = action_header->len;
