@@ -20,113 +20,120 @@
 
 #include "cc_basic.h"
 
-/*FUNC:cc_init_of.c need to 
-*(1)init the 'cc_sw_queue'
-*(2)init the socket and return a fd in the struct sw_queue
-*(3)log system (in plan /blue print)
-*(4)to be continue
-*
-*return the cc_sw_queue and err or success msg code
-*/
-
-static switch_table cc_switch_table;
-
-static void
-_cc_init_event_handler(sw_info* cc_sw_info,int fd,event_handler_callback read_callback,void* read_data,
-						event_handler_callback write_callback,void* write_data)
-					
-{
-	cc_sw_info->eh->read_buf = read_data;
-	cc_sw_info->eh->write_buf = write_data;
-	cc_sw_info->eh->read_handler = read_callback;
-	cc_sw_info->eh->write_handler = write_callback;
-}
-void (*cc_init_evnet_handler)(sw_info* cc_sw_info,int fd,event_handler_callback read_callback,void* read_data,
-						event_handler_callback write_callback,void* write_data) = _cc_init_event_handler;
-/*
-static void
-_cc_start_event_handler(sw_info* cc_sw_info)
-{
-	int ret;
-	while(1)
-	{
-		ret = cc_secure_channel_read(cc_sw_info);
-		if( ret == CC_ERROR )
-		{
-			log_err_for_cc("read from secure channle error !");
-			continue;
-		}
-	}
-		
-		
-}
-void (*cc_start_event_handler)(sw_info* cc_sw_info) = _cc_start_event_handler;
-*/
 
 static int
-cc_insert_sw_info(sw_info* cc_sw_info)
+cc_init_sw_info_table(list_element* sw_info_table)
 {
-	if(cc_switch_table->head == NULL)
-	{
-		cc_switch_table->head = (each_sw*)malloc(sizeof(each_sw));
-		if( cc_switch_table->head == NULL )
-		{
-			log_err_for_cc("create switch table's head failed in %s",__func__);
-			return CC_ERROR;
-		}
+	if( !(create_list(&sw_info_table)) ){		
+		log_info_for_cc("create sw info table success!");
+		return CC_ERROR;	
 	}
-	each_sw* tmp = cc_switch_table->head->next;
-	/*to find the end of list*/
-	while(tmp != NULL)
-	{	
-		tmp = tmp->next;
-	}
-	tmp->next = cc_sw_info->cc_switch;
+	log_info_for_cc("create sw info table success!");
 	return CC_SUCCESS;
 }
 
-sw_info*
-cc_recv_conn_from_switch(struct cc_socket* listen_sock)
+
+static int
+cc_init_of_socket(cc_socket* cc_socket_)
 {
-	sw_info* cc_sw_info = NULL;
-	int ret,_ret;
-	ret = cc_conn_accept(cc_sw_info);
-	/*here whether the accept is success or unsuccess ,return to the main process
-	 *and register the information of switch include dpid 
-	 */
-	if( ret != CC_ERROR && cc_sw_info != NULL )
+	int ret;
+
+	ret = cc_init_listenfd(cc_socket_);
+	if( ret < 0 )
 	{
-		_ret = cc_insert_sw_info(cc_sw_info);
-		if( _ret == CC_ERROR )
-		{
-			log_err_for_cc("insert sw info failed");
-			return CC_ERROR;
-		}
-	}else{
-		
+		log_err_for_cc("create fd error!");
+		return CC_ERROR;
 	}
+	return CC_SUCCESS;
 }
 
 
 static int
-cc_init_of(struct cc_socket* listen_socket)
+cc_insert_sw_info(list_element* sw_info_table, sw_info* cc_sw_info)
 {
-	int ret;
+	bool ret;
 
-	while(1)
+	ret = append_to_tail(&sw_info_table,(void*)cc_sw_info);
+	if( !ret )
 	{
-		ret = cc_recv_conn_from_switch(cc_socket);
-		if( ret == CC_CONN_SUCCESS )
-			break;
-		else
-			continue;
+		log_err_for_cc("insert sw info failed!");
+		return CC_ERROR;
 	}
-	cc_init_event_handler(cc_sw_info->);
-	//cc_start_event_handler();
-	
+
+	return CC_SUCCESS;		
 }
 
 
+static int
+cc_delete_sw_info(list_element* sw_info_table, sw_info* cc_sw_info)
+{
+	bool ret;
+
+	ret = delete_element(&sw_info_table, (void*)cc_sw_info);
+	if( !ret )
+	{
+		log_err_for_cc("delete sw info failed!");
+		return CC_ERROR;
+	}
+	
+	return CC_SUCCESS;
+}
+
+
+static int
+cc_polling(list_element* sw_info_table, cc_socket* cc_socket_)
+{
+	int ret;
+	fd_set listen_fdset;
+	int max_fd = cc_socket->fd + 1;
+
+	FD_ZERO(listen_fdset);
+	FD_SET(&cc_socket->fd, listen_fdset);
+	while(1)
+	{
+		
+		FD_ZERO(&listen_fdset);
+		FD_SET(cc_socket->fd,&listen_fdset);
+		ret = select(max_fd,&listen_fdset,NULL,NULL,0);
+		if( ret == -1 )
+		{
+			if( errno == EINTR )				
+				continue;
+			else
+				return CC_ERROR;
+		}else if( ret == 0 ){
+			continue;
+		}else{
+			if(FD_ISSET(cc_socket->fd, &listen_fdset))
+			{
+				sw_info *cc_sw_info = (sw_info*)malloc(sizeof(sw_info));
+				ret = cc_conn_accept(cc_socket_ , cc_sw_info);
+				if( ret < 0 ){
+					log_err_for_cc("accept failed!");
+					return CC_ERROR;
+				}
+				ret = cc_insert_sw_info(sw_info_table, cc_sw_info);
+				if( ret < 0 )
+					return CC_ERROR;
+			}
+		}
+	}
+
+	return CC_SUCCESS;
+}
+
+static int
+cc_finalize_of(list_element* sw_info_table, cc_socket* cc_socket_)
+{
+	if( !(delete_list(sw_info_table)))
+		return CC_ERROR;
+	close(cc_socket_->fd);
+	free(cc_socket_);
+	
+	return CC_SUCCESS;
+}
+
+#if 0
 static void
 cc_app_init(const char** app_name,int num)
 {
@@ -149,4 +156,4 @@ cc_app_run(struct cc_app* cc_app)
 {
 	
 }
-
+#endif

@@ -103,7 +103,7 @@ append_to_tail( list_element **head, void *data ) {
     die( "head must not be NULL" );
   }
 
-  list_element *new_tail = xmalloc( sizeof( list_element ) );
+  list_element *new_tail = malloc( sizeof( list_element ) );
   new_tail->data = data;
   new_tail->next = NULL;
 
@@ -205,7 +205,7 @@ delete_element( list_element **head, const void *data ) {
 
   if ( e->data == data ) {
     *head = e->next;
-    xfree( e );
+    free( e );
     return true;
   }
 
@@ -213,7 +213,7 @@ delete_element( list_element **head, const void *data ) {
     if ( e->next->data == data ) {
       list_element *delete_me = e->next;
       e->next = e->next->next;
-      xfree( delete_me );
+      free( delete_me );
       return true;
     }
   }
@@ -233,7 +233,7 @@ delete_list( list_element *head ) {
   for ( list_element *e = head; e != NULL; ) {
     list_element *delete_me = e;
     e = e->next;
-    xfree( delete_me );
+    free( delete_me );
   }
   return true;
 }

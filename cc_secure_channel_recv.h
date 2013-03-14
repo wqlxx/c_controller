@@ -1,5 +1,5 @@
 /*
- * cc_of_msg_handler functions.
+ * Utility functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -18,28 +18,33 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef CC_OF_MSG_HANDLER_H
-#define CC_OF_MSG_HANDLER_H 1
+#ifndef CC_SECURE_CHANNLE_RECV_H
+#define CC_SECURE_CHANNEL_RECV_H 1
 
-#include "cc_of_msg_send.h"
 #include "cc_basic.h"
+#include "cc_of_msg_recv.h"
 
-struct msg_for_app {
-	buffer* buf;
-	uint64_t dpid;
+struct cc_writev_args {
+	struct iovec *iov;
+	int iovcnt;
 };
-typedef struct msg_for_app msg_for_app;
+typedef struct cc_writev_args cc_writev_args;
 
+typedef int (*FUNC_CB)(sw_info*, buffer*);
 
-int cc_event_recv_hello(sw_info*, buffer*);
+FUNC_CB cc_select_handler(uint16_t );
 
-int cc_event_recv_feature_reply(sw_info*, uint32_t);
+static int cc_ofpmsg_handle(sw_info*, buffer*);
 
-int cc_event_recv_echo_reply(sw_info*, buffer*);
+static int cc_recv_from_secure_channel(sw_info* );
 
-int cc_evnet_recv_echo_request(sw_info*, uint32_t, buffer*);
+static int cc_secure_channle_read(sw_info* );
 
-int cc_event_send_msg(buffer* );
+static int cc_append_to_writev_args( buffer *, void *);
 
+static int cc_send_to_secure_channel(sw_info* ,buffer*);
+
+static int cc_flush_to_secure_channel(sw_info* cc_sw_info)
 
 #endif
+

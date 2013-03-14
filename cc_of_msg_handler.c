@@ -21,6 +21,37 @@
 #include "cc_of_msg_handle.h"
 
 
+int 
+cc_of_handler_recv_event(sw_info* cc_sw_info)
+{
+	int ret;
+	ret = cc_secure_channel_read(cc_sw_info);
+	if( ret < 0 )
+	{
+		log_err_for_cc("recv_from_secure_channel error!");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;
+}
+
+
+int
+cc_of_handler_send_event(sw_info* cc_sw_info)
+{
+	int ret;
+	
+	ret = cc_flush_to_secure_channel(cc_sw_info);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_flush_to_secure_channel error");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;
+}
+
+
 int
 cc_event_recv_hello(sw_info* cc_sw_info,buffer* buf)
 {

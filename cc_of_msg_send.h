@@ -25,7 +25,7 @@
 
 #include "cc_basic.h"
 #include "cc_of_msg_prep.h"
-#include "cc_xid.h"
+#include "cc_secure_channel.h"
 
 #define OFP_ERROR_MSG_MAX_DATA 64
 
@@ -42,6 +42,30 @@ int cc_send_get_config_request(sw_info* , buffer*);
 int cc_send_set_config(sw_info*, buffer*);
 
 int cc_send_error_msg( sw_info* , uint16_t, uint16_t, buffer*);
+
+int cc_senf_packet_out(sw_info* , buffer* );
+
+int cc_send_port_mod(sw_info* , buffer* );
+
+int cc_send_stats_request(sw_info* , buffer* );
+
+int cc_send_get_desc_stats(sw_info* , buffer* );
+
+int cc_send_flow_stats_request(sw_info* , buffer* );
+
+int cc_send_aggregate_stats_request(sw_info* , buffer* );
+
+int cc_send_table_stats_request(sw_info* , buffer* );
+
+int cc_send_port_stats_request(sw_info* , buffer* );
+
+int cc_send_queue_stats_request(sw_info* , buffer* );
+
+int cc_send_vendor_stats_request(sw_info* , buffer* );
+
+int cc_send_msg_to_switch(sw_info* , buffer* );
+
+static int update_flowmod_cookie( buffer *, char * );
 
 #if 0
 struct of_msg_send_class {

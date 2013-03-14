@@ -1522,7 +1522,7 @@ get_transaction_id( void ) {
 
 
 uint64_t
-get_cookie( void ) {
+cc_get_cookie( void ) {
   debug( "Generating a cookie." );
 
   pthread_mutex_lock( &cookie_mutex );

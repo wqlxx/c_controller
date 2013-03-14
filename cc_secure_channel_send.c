@@ -21,6 +21,78 @@
 
 #include "cc_secure_channel_send.h"
 
+FUNC_CB_S  
+cc_select_send_func(uint16_t type)
+{
+	int ret;
+	FUNC_CB_S func_cb;
+	switch(type){
+		  // Immutable messages.
+			  case OFPT_HELLO:
+				  func_cb = cc_send_hello;
+				  break;
+		  
+			  case OFPT_ERROR:
+				  func_cb = cc_send_error_msg;
+				  break;
+		
+			  case OFPT_ECHO_REQUEST:
+				  func_cb = cc_send_echo_request;
+				  break;
+		
+			  case OFPT_ECHO_REPLY:
+				  func_cb = cc_send_echo_reply;
+				  break;
+		
+			  case OFPT_VENDOR:
+				  func_cb = cc_send_vendor_stats_request;
+				  break;
+		
+			  case OFPT_FEATURES_REPLY:
+				  func_cb = cc_send_features_reply;
+				  break;
+		
+			  case OFPT_GET_CONFIG_REPLY:
+				  func_cb = cc_send_get_config_reply;
+				  break;
+		
+			  // Asynchronous messages.
+			  case OFPT_PACKET_IN:
+				  func_cb = cc_send_packet_in;
+				  break;
+		
+			  case OFPT_FLOW_REMOVED:
+				  func_cb = cc_send_flow_removed;
+				  break;
+		
+			  case OFPT_PORT_STATUS:
+				  func_cb = cc_send_port_status;
+				  break;
+		
+			  // Statistics messages.
+			  case OFPT_STATS_REPLY:
+				  func_cb = cc_send_stats_reply;
+				  break;
+		
+			  // Barrier messages.
+			  case OFPT_BARRIER_REPLY:
+				  func_cb = cc_send_barrier_reply;
+				  break;
+		
+			  // Queue Configuration messages.
+			  case OFPT_QUEUE_GET_CONFIG_REPLY:
+				  func_cb = NULL;
+				  break;
+		
+			  default:
+				  assert( 0 );
+				  break;
+		}
+
+	return func_cb;
+}
+
+
 static int
 cc_send_to_secure_channel(sw_info* cc_sw_info,buffer* buf)
 {
@@ -37,18 +109,32 @@ cc_send_to_secure_channel(sw_info* cc_sw_info,buffer* buf)
 
 
 static int
+cc_send_to_secure_channel_app(sw_info* cc_sw_info,buffer* buf)
+{
+	int ret;
+	buffer* msg;
+
+	if( cc_sw_info->app_send_queue == NULL )
+		cc_sw_info->app_send_queue = create_message_queue();
+
+	ret = enqueue_message(cc_sw_info->send_queue, buf);
+
+	return ret;
+}
+
+
+static int
 cc_flush_to_secure_channel(sw_info* cc_sw_info)
 {
 	buffer* msg;
-	
-	while(( peek_message(cc_sw_info->recv_queue, msg)) < 0 )
+	int count = 0;
+	while(( msg = dequeue_message(cc_sw_info->recv_queue, msg)) != NULL && count < 50)
 	{
 		ssize_t write_length = write( cc_sw_info->cc_switch->cc_socket->fd, msg->data, CC_BUFFER_SIZE);
 		if( write_length < 0 )
 		{
 			if ( errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK ) 
 			{
-				
 				return CC_ERROR;
 			}
 			perror("fail to write a message to secure channel");
@@ -61,7 +147,9 @@ cc_flush_to_secure_channel(sw_info* cc_sw_info)
 		/*after send ,free the buf*/
 		buffer* buf = dequeue_message(message_queue * queue);
 		free_buffer(buf);
+		count++;
 	}
+	return CC_SUCCESS;
 }
 
 

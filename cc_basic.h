@@ -27,7 +27,17 @@
 #include <malloc.h>
 #include <assert.h>
 #include <pthread.h>
+#include <arpa/inet.h>
+#include <assert.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stddef.h>
+
 
 #include "cc_init_of.h"
 #include "cc_socket.h"
@@ -36,13 +46,18 @@
 #include "cc_utility.h"
 #include "cc_double_link.h"
 #include "cc_single_link.h"
+#include "cc_xid.h"
+#include "cc_double_link.h"
+#include "cc_single_link.h"
+#include "cc_get_local_ip.h"
+#include "cc_hash_table.h"
 
 
 #define CC_ERROR -1
 #define CC_SUCCESS 0
 #define CC_CONN_DOWN 1
 
-#define CC_CONN_TIMEOUT_SEC 2
+#define CC_CONN_TIMEOUT_SEC 0
 #define CC_CONN_TIMEOUT_USEC 0
 /*used to temperaly to restrict the number \
 *of linked switch,to make this project go easy
@@ -81,6 +96,7 @@ struct cc_socket{
 };
 typedef struct cc_socket cc_socket;
 
+
 struct xid_entry {
   uint32_t xid;
   uint32_t original_xid;
@@ -92,7 +108,6 @@ typedef struct xid_entry xid_entry;
 
 
 struct xid_table {
-  xid_entry *entries[ CC_XID_MAX_ENTRIES ];
   hash_table *hash;
   int next_index;
 };
@@ -122,12 +137,6 @@ struct each_sw{
 };
 typedef struct each_sw each_sw;
 
-
-struct switch_table {
-	each_sw *head;
-	struct cc_socket listen_socket;
-};
-typedef struct switch_table switch_table;
 /**************************************************/
 
 
@@ -212,7 +221,8 @@ struct sw_info
 	 */
 	int app_fd;
 	char* app_server_ip;
-	message_queue *app_queue;
+	message_queue *app_recv_queue;
+	message_queue *app_send_queue;
 
 	/*set config*/
 	uint16_t config_flags;        // OFPC_* flags

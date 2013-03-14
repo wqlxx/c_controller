@@ -35,13 +35,13 @@ cc_set_socket_fd(void)
 }
 
 int
-cc_set_socket_nonblocking(int fd)
+cc_set_socket_nonblocking(cc_socket* cc_socket_)
 {
     int ret;
-    if ((ret = fcntl(fd, F_GETFL, NULL)) < 0) {
+    if ((ret = fcntl(cc_socket_->fd, F_GETFL, NULL)) < 0) {
         return CC_ERROR;
     }
-    if ((ret = fcntl((fd, F_SETFL, flags | O_NONBLOCK)) < 0) {
+    if ((ret = fcntl((cc_socket_->fd, F_SETFL, flags | O_NONBLOCK)) < 0) {
         return CC_ERROR;
     }
     return CC_SUCCESS;
@@ -73,7 +73,7 @@ cc_server_conn_create(struct cc_socket *cc_socket)
 	if((cc_socket->fd= cc_set_socket_fd()) < 0)
 	{
 		printf("|ERR|socket create failed\n");
-		return 	CC_CONN_ERR;
+		return 	CC_ERROR;
 	}
 
 	memset(cc_socket->cc_addr,0,sizeof(struct sockaddr_in));
@@ -88,14 +88,22 @@ cc_server_conn_create(struct cc_socket *cc_socket)
 	if ( ret < 0 ) 
 	{
     	printf("|ERR|socket create failed\n");
-    	return CC_CONN_ERR;
+    	return CC_ERROR;
   	}
 
-	ret = setsockopt(cc_socket->fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof( flag ));
+	//ret = setsockopt(cc_socket->fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof( flag ));
+	ret = cc_set_socket_nodelay(cc_socket->fd);
 	if ( ret < 0 ) 
 	{
     	printf("|ERR|socket create failed\n");
-    	return CC_CONN_ERR;
+    	return CC_ERROR;
+  	}
+
+	ret = cc_set_socket_nonblocking(cc_socket->fd);
+	if ( ret < 0 ) 
+	{
+    	printf("|ERR|socket create failed\n");
+    	return CC_ERROR;
   	}
 
 	ret = bind(cc_socket->fd,(struct sockaddr*)&cc_socket->cc_addr,sizeof(struct sockaddr_in));
@@ -103,14 +111,14 @@ cc_server_conn_create(struct cc_socket *cc_socket)
 	{
     	printf("|ERR|socket create failed\n");
 		close( cc_switch_proc.listen_sock.fd );
-    	return CC_CONN_ERR;
+    	return CC_ERROR;
   	}
 
 	if(listen(cc_socket->fd,CC_LENGTH_OF_LISTEN_QUEUE))
 	{
     	printf("|ERR|socket create failed\n");
 		close( cc_switch_proc.listen_sock.fd );
-    	return CC_CONN_ERR;
+    	return CC_ERROR;
   	}
 
 	return cc_socket->fd;
@@ -152,8 +160,10 @@ cc_client_socket_create(char *server_ip, uint16_t port)
 int 
 cc_close_socket(struct cc_socket *cc_socket)
 {
+	log_info_for_cc("close listen fd!");
 	close(cc_socket->listen_fd);
 	free(cc_socket);
+	return CC_SUCCESS;
 }
 
 
@@ -179,6 +189,7 @@ static int
 cc_conn_init(struct cc_socket* cc_socket)
 {
 	int ret;
+	
 	if((ret = (cc_server_conn_create(cc_socket)))<0)
 		return CC_ERROR;
 	else	
@@ -187,18 +198,21 @@ cc_conn_init(struct cc_socket* cc_socket)
 }
 
 static int
-cc_init_listenfd(struct cc_socket* cc_socket)
+cc_init_listenfd(cc_socket* cc_socket)
 {
 	int ret;
+
+	cc_socket = (cc_socket*)malloc(sizeof(cc_socket));
+	
 	ret = cc_conn_init(cc_socket);
-	if( ret == CC_ERROR )
+	if( ret < 0 )
 		return CC_ERROR;
 	else
 		return CC_SUCCESS;
 }
 
 static int 
-cc_conn_accept(switch_table* cc_switch_table,sw_info* cc_sw_info)
+cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 {
 	struct sockaddr_in switch_addr;
 	socklen_t addr_len;
@@ -207,7 +221,7 @@ cc_conn_accept(switch_table* cc_switch_table,sw_info* cc_sw_info)
 	int ret;
 
 	addr_len = sizeof(struct sockaddr_in);
-	accept_fd = accept(cc_switch_table->listen_socket->fd,(struct sockaddr*)&switch_addr,sizeof(switch_addr));
+	accept_fd = accept(cc_socket_->fd,(struct sockaddr*)&switch_addr,sizeof(switch_addr));
 	if(accept_fd < 0)
 	{
 		printf("|ERR|accept failed\n");
@@ -295,9 +309,11 @@ cc_conn_accept(switch_table* cc_switch_table,sw_info* cc_sw_info)
 				continue;
 			}else{
 				if(FD_ISSET(accept_fd,&readfds))
-					cc_recv_from_secure_channel(cc_sw_info);
+					cc_of_handler_recv_event(cc_sw_info);
+					//cc_recv_from_secure_channel(cc_sw_info);
 				if(FD_ISSET(accept_fd,&writefds))
-					cc_flush_to_secure_channel(cc_sw_info);
+					cc_of_handler_send_event(cc_sw_info);
+					//cc_flush_to_secure_channel(cc_sw_info);
 			}
 		}
 		return CC_SUCCESS;

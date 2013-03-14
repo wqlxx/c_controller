@@ -27,63 +27,36 @@ cc_select_handler(uint16_t type)
 	switch ( type ) {
   	// Immutable messages.
   		case OFPT_HELLO:
-			func_cb = cc_recv_hello_msg;
-   			//ret = ofpmsg_recv_hello( sw_info, buf );
+			func_cb = cc_send_hello;
    			break;
 	
   		case OFPT_ERROR:
-			func_cb = cc_recv_err_msg;
-   			//ret = ofpmsg_recv_error( sw_info, buf );
+			func_cb = cc_send_error_msg;
    			break;
 
   		case OFPT_ECHO_REQUEST:
-			func_cb = cc_recv_echo_request;
-    		//ret = ofpmsg_recv_echorequest( sw_info, buf );
+			func_cb = cc_send_echo_request;
     		break;
 
   		case OFPT_ECHO_REPLY:
-			func_cb = cc_recv_echo_reply;
-   			//ret = ofpmsg_recv_echoreply( sw_info, buf );
+			func_cb = cc_send_echo_reply;
     		break;
 
   		case OFPT_VENDOR:
-			func_cb = cc_recv_vendor;
-    		//ret = ofpmsg_recv_vendor( sw_info, buf );
+			func_cb = cc_send_vendor_stats_request;
     		break;
 
   		// Switch configuration messages.
-  		case OFPT_FEATURES_REPLY:
-			func_cb = cc_recv_features_reply;
-    		//ret = ofpmsg_recv_featuresreply( sw_info, buf );
-    		break;
-
-  		case OFPT_GET_CONFIG_REPLY:
-			func_cb = cc_recv_get_config_reply;
-    		//ret = ofpmsg_recv_getconfigreply( sw_info, buf );
-    		break;
-
   		// Asynchronous messages.
-  		case OFPT_PACKET_IN:
-			func_cb = cc_recv_packet_in;
-    		//ret = ofpmsg_recv_packetin( sw_info, buf );
-    		break;
-
   		case OFPT_FLOW_REMOVED:
-			func_cb = cc_recv_flow_removed;
-    		//ret = ofpmsg_recv_flowremoved( sw_info, buf );
+			func_cb = cc_send_flow_mod;
     		break;
 
   		case OFPT_PORT_STATUS:
-			func_cb = cc_recv_port_status;
-    		//ret = ofpmsg_recv_portstatus( sw_info, buf );
+			func_cb = cc_send_port_stats_request;
     		break;
 
   		// Statistics messages.
-  		case OFPT_STATS_REPLY:
-			func_cb = cc_recv_stats_reply;
-    		//ret = ofpmsg_recv_statsreply( sw_info, buf );
-    		break;
-
   		// Barrier messages.
   		case OFPT_BARRIER_REPLY:
 			func_cb = cc_recv_barrier_reply;
@@ -221,7 +194,7 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info)
 
 
 static int
-cc_secure_channle_read(sw_info* cc_sw_info)
+cc_secure_channel_read(sw_info* cc_sw_info)
 {
 	int ret;
 	buffer* buf;
@@ -238,26 +211,7 @@ cc_secure_channle_read(sw_info* cc_sw_info)
 }
 
 
-/*
- *	send message to secure channel
- */
-static int
-cc_append_to_writev_args( buffer *message, void *user_data )
-{
-  cc_writev_args *args = user_data;
-
-  args->iov[ args->iovcnt ].iov_base = message->data;
-  args->iov[ args->iovcnt ].iov_len = message->length;
-  args->iovcnt++;
-
-  if ( args->iovcnt >= IOV_MAX ) {
-    return CC_ERROR;
-  }
-
-  return CC_SUCCESS;
-}
-
-
+#if 0
 /* it is for timer */
 static void
 cc_time_out_event(sw_info *cc_sw_info)

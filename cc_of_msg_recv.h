@@ -21,8 +21,6 @@
 #ifndef CC_OF_HANDLER_H
 #define CC_OF_HANDLER_H 1
 
-#include <stddef.h>
-/*from mul_of */
 #include "cc_basic.h"
 #include "cc_of_msg_handler.h"
 #include "cc_of_msg_err.h"

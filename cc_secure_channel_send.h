@@ -23,4 +23,5 @@
 
 #include "cc_basic.h"
 
+typedef int (*FUNC_CB_S)(sw_info* , buffer*);
 #endif

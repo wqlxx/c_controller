@@ -20,17 +20,19 @@
 #ifndef CC_INIT_OF_H
 #define CC_INIT_OF_H 1
 
-#include "cc_socket.h"
-#include "cc_of_handler.h"
-#include "cc_switch_table.h"
-#include "cc_basic_struct.h"
+#include "cc_basic.h"
 
-typedef void (*event_handler_callback)(int ,void* data);
+static int cc_init_sw_info_table(list_element* );
 
-extern static int cc_init_event_handler(int fd,event_handler_callback read_callback,void * read_data,
-						event_handler_callback write_callbacl,void * write_data)
-extern static int cc_init_of();
-extern static int cc_init_app();
+static int cc_init_of_socket(cc_socket* );
+
+static int cc_insert_sw_info(list_element* , sw_info* );
+
+static int cc_delete_sw_info(list_element* , sw_info* );
+
+static int cc_polling(list_element* , cc_socket* );
+
+static int cc_finalize_of(list_element* , cc_socket* );
 
 #endif
 

@@ -164,23 +164,332 @@ cc_send_error_msg( sw_info* cc_sw_info, uint16_t type, uint16_t code, buffer *da
 int
 cc_send_flow_mod(sw_info* cc_sw_info, buffer* buf)
 {
+	buffer* send_buf;
+	uint32_t xid;
+	struct ofp_match match;
+	uint64_t cookie;
+	uint16_t command;
+    uint16_t idle_timeout;
+	uint16_t hard_timeout;
+    uint16_t priority;
+	uint32_t buffer_id;
+    uint16_t out_port;
+	uint16_t flags;
+    openflow_actions *actions; 	
+
+	xid = cc_generate_xid(cc_sw_info);
+	struct ofp_match match = (struct ofp_match*)buf;
+	cookie = cc_get_cookie();
+	send_buf = cc_create_flow_mod(xid, match, cookie, command, idle_timeout,
+					hard_timeout,  priority,  buffer_id, out_port,
+					flags, actions);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+	
 	return CC_SUCCESS;
 }
 
 
 int
-cc_send_get_stats(sw_info* cc_sw_info, buffer* buf)
+cc_senf_packet_out(sw_info* cc_sw_info, buffer* buf)
 {
+	buffer* send_buf;
+	uint32_t xid;
+	uint32_t buffer_id;
+	uint16_t in_port;
+	openflow_actions* actions;
+	buffer* data;
+	int ret;
+	
+	send_buf = cc_create_packet_out(xid, buffer_id, in_port, actions, data)
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
 	return CC_SUCCESS;
 }
+
+int
+cc_send_port_mod(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t port_no;
+	uint8_t hw_addr[OFP_ETH_ALEN];
+	uint32_t config;
+	uint32_t mask;
+	uint32_t advertise;
+	
+	send_buf = cc_create_port_mod(xid, port_no,  hw_addr, config, mask, advertise);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;	
+}
+
+
+int
+cc_send_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t type;
+	uint16_t length;
+	uint16_t flags;
+
+	send_buf = cc_create_stats_request(xid, type, length, flags);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;		
+}
+
+
+int
+cc_send_get_desc_stats(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+
+	send_buf = cc_create_desc_stats_request(xid, flags);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}	
+	return CC_SUCCESS;
+}
+
+
+int
+cc_send_flow_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+	struct ofp_match match;
+	uint8_t table_id;
+	uint16_t out_port;
+	
+	send_buf = cc_create_flow_stats_request(xid, flags, match, 
+									table_id, out_port);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_packet_out");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}	
+	
+	return CC_SUCCESS;	
+}
+
+
+int
+cc_send_aggregate_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+	struct ofp_match match;
+	uint8_t table_id;
+	uint16_t out_port;
+
+	send_buf = cc_create_aggregate_stats_request(const uint32_t transaction_id,const uint16_t flags,const struct ofp_match match,const uint8_t table_id,const uint16_t out_port);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_aggregate_stats_request");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}	
+	
+	return CC_SUCCESS;	
+}
+
+
+int
+cc_send_table_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+
+	send_buf = cc_create_table_stats_request(xid, flags);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_table_stats_request");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;	
+}
+
+
+int
+cc_send_port_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+	uint16_t port_no;
+
+	send_buf = cc_create_port_stats_request(xid, flags, port_no);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_port_stats_request");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;	
+}
+
+
+int
+cc_send_queue_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+	uint16_t port_no;
+	uint32_t queue_id;
+
+	send_buf = cc_create_queue_stats_request(xid, flags, port_no, queue_id);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_send_queue_stats_request");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;		
+}
+
+
+int
+cc_send_vendor_stats_request(sw_info* cc_sw_info, buffer* buf)
+{
+	buffer* send_buf;
+	int ret;
+	uint32_t xid;
+	uint16_t flags;
+	uint32_t vendor;
+	buffer body;
+
+	send_buf = cc_create_vendor_stats_request(xid, flags, vendor, body);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_vendor_stats_request");
+		return CC_ERROR;
+	}
+
+	ret = cc_send_to_secure_channel(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_send_to_secure_channel");
+		return CC_ERROR;
+	}
+
+	return CC_SUCCESS;
+}
+
 
 /*
  *@param: buf may be the lldp , arp and so on
  */
+
 int
 cc_send_msg_to_switch(sw_info* cc_sw_info, buffer* buf)
 {
-#if 0
+
 	size_t packet_len = sizeof(struct ofp_packet_out) + actions_length + buf->length;
 	buffer* new_;
 	new_ = alloc_buffer_with_length(packet_len);
@@ -201,7 +510,6 @@ cc_send_msg_to_switch(sw_info* cc_sw_info, buffer* buf)
 	memcpy((uint8_t *)opo->actions + actions_len, buf->data, buf->length);
 
 	buf->data = (void*)opo;
-#endif
 
 	buffer* new_buf;
 	uint32_t xid;
@@ -217,8 +525,8 @@ cc_send_msg_to_switch(sw_info* cc_sw_info, buffer* buf)
 
 	return CC_SUCCESS;
 }
-/* wait for next step that finish of app service */
-#if 0
+
+
 
 static int
 update_flowmod_cookie( buffer *buf, char *service_name )
@@ -278,92 +586,5 @@ update_flowmod_cookie( buffer *buf, char *service_name )
 
   return CC_SUCCESS;
 }
-
-
-int
-ofpmsg_send( sw_info* cc_sw_info, buffer *buf, char *service_name ) {
-  int ret;
-  struct ofp_header *ofp_header;
-  uint32_t new_xid;
-
-  ofp_header = buf->data;
-
-  new_xid = insert_xid_entry( ntohl( ofp_header->xid ), service_name );
-  ofp_header->xid = htonl( new_xid );
-
-  if ( ofp_header->type == OFPT_FLOW_MOD && sw_info->cookie_translation ) {
-    ret = update_flowmod_cookie( buf, service_name );
-    if ( ret < 0 ) {
-      error( "Failed to update cookie value ( ret = %d ).", ret );
-      free_buffer( buf );
-      return ret;
-    }
-  }
-
-  ret = send_to_secure_channel( sw_info, buf );
-  if ( ret == 0 ) {
-    debug( "Send an OpenFlow message %d to a switch %#" PRIx64 ".",
-      ofp_header->type, sw_info->datapath_id );
-  }
-
-  return ret;
-}
-
-
-int
-ofpmsg_send_delete_all_flows( sw_info* cc_sw_info ) {
-  int ret;
-  struct ofp_match match;
-  buffer *buf;
-
-  memset( &match, 0, sizeof( match ) );
-  match.wildcards = OFPFW_ALL;
-
-  buf = create_flow_mod( generate_xid(), match, RESERVED_COOKIE,
-                         OFPFC_DELETE, 0, 0, 0, UINT32_MAX, OFPP_NONE, 0, NULL );
-
-  ret = send_to_secure_channel( sw_info, buf );
-  if ( ret == 0 ) {
-    debug( "Send 'flow mod (delete all)' to a switch %#" PRIx64 ".", sw_info->datapath_id );
-  }
-
-  return ret;
-}
-
-
-int
-ofpmsg_send_deny_all( sw_info* cc_sw_info ) {
-  int ret;
-  struct ofp_match match;
-  buffer *buf;
-
-  memset( &match, 0, sizeof( match ) );
-  match.wildcards = OFPFW_ALL;
-  const uint16_t timeout = 10;
-
-  buf = create_flow_mod( generate_xid(), match, RESERVED_COOKIE,
-                         OFPFC_ADD, 0, timeout, UINT16_MAX, UINT32_MAX, OFPP_NONE, 0, NULL );
-
-  ret = send_to_secure_channel( sw_info, buf );
-  if ( ret == 0 ) {
-    debug( "Send 'flow mod (deny all)' to a switch %#" PRIx64 ".", sw_info->datapath_id );
-  }
-
-  return ret;
-}
-
-#endif
-
-#if 0
-const struct of_msg_send_class of_msg_send = {
-	"cc_send_of_msg",
-	cc_send_hello,
-	cc_send_echo_request,
-	cc_send_echo_reply,
-	cc_send_features_request,
-	cc_send_set_config,
-	cc_send_error_msg
-};
-#endif
 
 

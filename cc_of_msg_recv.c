@@ -20,6 +20,37 @@
 
 #include "cc_of_msg_recv.h"
 
+
+static int
+cc_insert_to_send_queue(sw_info* cc_sw_info,buffer* buf)
+{
+	int ret;
+	buffer* msg;
+
+	if( sw_info->send_queue == NULL )
+		sw_info->send_queue = create_message_queue();
+
+	ret = enqueue_message(cc_sw_info->send_queue, buf);
+
+	return ret;
+}
+
+
+static int
+cc_insert_to_app_queue(sw_info* cc_sw_info, buffer* buf)
+{
+	int ret;
+	buffer* msg;
+
+	if( sw_info->app_queue== NULL )
+		sw_info->app_queue = create_message_queue();
+
+	ret = enqueue_message(cc_sw_info->app_queue, buf);
+
+	return ret;
+}
+
+
 static inline uint32_t
 make_inet_mask(uint8_t len)
 {
@@ -135,7 +166,25 @@ cc_recv_hello_msg(sw_info* cc_sw_info,buffer* buf)
 	
 	log_info_for_cc("recv a hello message");
 
-	ret = cc_event_recv_hello(cc_sw_info, buf);	
+	ret = cc_timer_start();
+
+	buffer* send_buf;
+	uint32_t xid = cc_generate_xid(cc_sw_info);
+	send_buf = cc_create_features_request(xid);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_insert_to_send_queue error!");
+		return CC_ERROR;
+	}
+	
+	ret = cc_insert_to_send_queue(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_send_queue error!");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}
+	free_buffer(buf);
 	return ret;
 }
 
@@ -198,9 +247,10 @@ static int
 cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf)
 {
 	struct ofp_header *header = buf->data;
-	uint32_t transaction_id = htonl(header->xid);
+	uint32_t xid = htonl(header->xid);
 	uint16_t length = htons( header->length);
 	int ret;
+	buffer* send_buf;
 
 	ret = validate_echo_request(buf);
 	if( ret < 0 )
@@ -211,24 +261,24 @@ cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf)
 	
 	log_info_for_cc("recv a echo request message");
 
-	cc_sw_info->xid = transaction_id;
+	cc_sw_info->xid = xid;// here we need to fix the bug
 	
-	remove_front_buffer(buf,sizeof(struct ofp_header));
-	/*
-	buffer* body = NULL;
-	if((length - sizeof(struct ofp_header))>0)
+	send_buf = cc_create_echo_reply(xid, buf);
+	if( send_buf == NULL )
 	{
-		body = duplicate_buffer(buf);
-		remove_front_buffer(body,sizeof(struct ofp_header));
+		log_err_for_cc("cc_insert_to_send_queue error!");
+		return CC_ERROR;
+	}
+	
+	ret = cc_insert_to_send_queue(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_send_queue error!");
+		free_buffer(send_buf);
+		return CC_ERROR;
 	}	
 	
-	if( body != NULL )
-		free_buffer(body);
-	*/
-	//ret = cc_event_recv_echo_request(cc_sw_info);
-	
-	//return ret;
-	return cc_send_echo_reply(cc_sw_info,buf);//here the xid should be correct!
+	return ret;//here the xid should be correct!
 }
 
 
@@ -237,7 +287,9 @@ cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 {
 	int ret;
 	struct ofp_header* header = buf->data;
-
+	buffer* send_buf;
+	uint32_t xid;
+	
 	ret = validate_echo_reply(buf);
 	if( ret < 0 )
 	{
@@ -248,13 +300,30 @@ cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 	log_info_for_cc("recv a echo reply message");
 	
 	if( cc_lookup_xid_entry( header->xid )) {
-		ret = cc_event_recv_echo_reply(cc_sw_info, buf);
+
+		xid = cc_generate_xid(cc_sw_info);
+		send_buf = cc_create_echo_request(xid, buf);
+		if( send_buf == NULL )
+		{
+			log_err_for_cc("cc_insert_to_send_queue error!");
+			return CC_ERROR;
+		}
+		
+		ret = cc_insert_to_send_queue(cc_sw_info, send_buf);
+		if( ret < 0 )
+		{
+			log_err_for_cc("cc_insert_to_send_queue error!");
+			free_buffer(send_buf);
+			return CC_ERROR;
+		}	
+		
+		free_buffer(buf);
 	}else{
 		log_err_for_cc("transction id is not complete!");
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-	
+		
 	return CC_SUCCESS;
 }
 
@@ -273,7 +342,14 @@ cc_recv_vendor(sw_info* cc_sw_info, buffer* buf)
 	
 	log_info_for_cc("recv a vendor msg");
 
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+
 	return CC_SUCCESS;
 }
 
@@ -284,7 +360,8 @@ cc_recv_get_config_reply(sw_info* cc_sw_info, buffer* buf)
 	
 	/* DO NOTHING*/
 	int ret;
-	
+	uint32_t xid;
+	buffer* send_buf = NULL;
 	ret = validate_get_config_reply(buf);
 	if( ret < 0 )
 	{
@@ -293,7 +370,24 @@ cc_recv_get_config_reply(sw_info* cc_sw_info, buffer* buf)
 	}
 	
 	log_info_for_cc("recv a get config reply");
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	xid = cc_generate_xid(cc_sw_info);
+	
+	send_buf = cc_create_echo_request(xid , buf);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_echo_request error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+	
+	ret = cc_insert_to_send_queue(cc_sw_info, send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_echo_request error!");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}
+	
 	return CC_SUCCESS;
 	
 }
@@ -312,7 +406,13 @@ cc_recv_flow_removed(sw_info* cc_sw_info, buffer* buf)
 	}
 	
 	log_info_for_cc("recv a flow removed msg");
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
 	return ret;
 }
 
@@ -330,7 +430,13 @@ cc_recv_barrier_reply(sw_info* cc_sw_info, buffer* buf)
 	}
 	
 	log_info_for_cc("recv a barrier reply");
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
 	return ret;
 }
 
@@ -373,8 +479,23 @@ cc_recv_features_reply(sw_info* cc_sw_info, buffer* buf)
 		cc_process_phy_port(cc_sw_info,&feat_rep->ports[i],OFPPR_ADD);
 	}
 
-	ret = cc_event_recv_feature_reply(cc_sw_info, buf);
-	/*after the send to the app,then free the buf*/
+	buffer* send_buf;
+	uint32_t xid = cc_generate_xid(cc_sw_info);
+	send_buf = cc_create_set_config(xid, cc_sw_info->flags, cc_sw_info->miss_send_len);
+	if( send_buf == NULL )
+	{
+		log_err_for_cc("cc_create_set_config error!");
+		return CC_ERROR;
+	}
+	ret = cc_insert_to_send_queue(cc_sw_info,send_buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_create_echo_request error!");
+		free_buffer(send_buf);
+		return CC_ERROR;
+	}
+	
+	free_buf(buf);
 	return ret;
 }
 
@@ -391,7 +512,14 @@ cc_recv_packet_in(sw_info* cc_sw_info,buffer* buf)
 	}
 	
 	log_info_for_cc("recv packet-in msg from switch");
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+
 	return ret
 }
 
@@ -410,7 +538,14 @@ cc_recv_port_status(sw_info* cc_sw_info, buffer* buf)
 	log_info_for_cc("recv a port status");
 	//struct ofp_port_status *ops = (void*)(buf->data);
 	//ret = cc_process_phy_port(cc_sw_info,&ops->desc,ops->reason);
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+	
 	return ret;
 }
 
@@ -428,7 +563,39 @@ cc_recv_stats_reply(sw_info* cc_sw_info, buffer* buf)
 	}
 	
 	log_info_for_cc("recv a stats reply");
-	ret = cc_event_send_to_app(cc_sw_info, buf);
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+
+	return ret;
+}
+
+
+int
+cc_recv_flow_stats_reply(sw_info* cc_sw_info, buffer* buf)
+{
+	int ret;
+
+	ret = validate_flow_stats_reply(buf);
+	if( ret < 0 )
+	{
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+	
+	log_info_for_cc("recv a flow stats reply");
+	ret = cc_insert_to_app_queue(cc_sw_info, buf);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_insert_to_app_queue error!");
+		free_buffer(buf);
+		return CC_ERROR;
+	}
+
 	return ret;
 }
 
@@ -453,7 +620,7 @@ cc_process_phy_port(sw_info* cc_sw_info, struct ofp_phy_port* port, uint8_t reas
 	return CC_SUCCESS;			
 }
 
-
+#if 0
 const struct of_handler_class of10_handler = {
 	0x01,
 	cc_recv_hello_msg,
@@ -469,4 +636,4 @@ const struct of_handler_class of10_handler = {
 	cc_recv_err_msg,
 	cc_recv_port_status
 };	
-
+#endif
