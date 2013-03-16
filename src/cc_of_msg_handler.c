@@ -53,6 +53,24 @@ cc_of_handler_send_event(sw_info* cc_sw_info)
 
 
 int
+cc_of_handler_recv_app_request(uint8_t type_, buffer* buf)
+{
+	/*parse the request from app*/
+	return CC_SUCCESS;
+}
+
+
+int
+cc_of_handler_send_to_app(message_queue* app_queue)
+{
+	int ret;
+	/*shared memory*/
+	return CC_SUCCESS;
+}
+
+
+#if 0
+int
 cc_event_recv_hello(sw_info* cc_sw_info,buffer* buf)
 {
 	log_info_for_cc("recv a hello, and send a feature request");
@@ -167,4 +185,4 @@ cc_event_send_msg(buffer* buf)
 {
 	return CC_SUCCESS;
 }
-
+#endif

@@ -53,7 +53,7 @@ insert_in_front( list_element **head, void *data ) {
   }
 
   list_element *old_head = *head;
-  list_element *new_head = xmalloc( sizeof( list_element ) );
+  list_element *new_head = malloc( sizeof( list_element ) );
 
   new_head->data = data;
   *head = new_head;
@@ -78,7 +78,7 @@ insert_before( list_element **head, const void *sibling, void *data ) {
 
   for ( list_element *e = *head; e->next != NULL; e = e->next ) {
     if ( e->next->data == sibling ) {
-      list_element *new_element = xmalloc( sizeof( list_element ) );
+      list_element *new_element = malloc( sizeof( list_element ) );
       new_element->next = e->next;
       new_element->data = data;
       e->next = new_element;
@@ -97,7 +97,7 @@ insert_before( list_element **head, const void *sibling, void *data ) {
  * @param data the data for the new element.
  * @return true on success; false otherwise.
  */
-bool
+int
 append_to_tail( list_element **head, void *data ) {
   if ( head == NULL ) {
     die( "head must not be NULL" );
@@ -109,13 +109,13 @@ append_to_tail( list_element **head, void *data ) {
 
   if ( *head == NULL ) {
     *head = new_tail;
-    return true;
+    return CC_SUCCESS;
   }
 
   list_element *e;
   for ( e = *head; e->next != NULL; e = e->next );
   e->next = new_tail;
-  return true;
+  return CC_SUCCESS;
 }
 
 

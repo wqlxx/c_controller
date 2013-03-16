@@ -28,64 +28,79 @@ cc_select_send_func(uint16_t type)
 	FUNC_CB_S func_cb;
 	switch(type){
 		  // Immutable messages.
-			  case OFPT_HELLO:
+			  case OFPAPP_HELLO:
 				  func_cb = cc_send_hello;
 				  break;
 		  
-			  case OFPT_ERROR:
+			  case OFPAPP_ERROR:
 				  func_cb = cc_send_error_msg;
 				  break;
 		
-			  case OFPT_ECHO_REQUEST:
+			  case OFPAPP_ECHO_REQUEST:
 				  func_cb = cc_send_echo_request;
 				  break;
 		
-			  case OFPT_ECHO_REPLY:
+			  case OFPAPP_ECHO_REPLY:
 				  func_cb = cc_send_echo_reply;
 				  break;
-		
-			  case OFPT_VENDOR:
-				  func_cb = cc_send_vendor_stats_request;
-				  break;
-		
-			  case OFPT_FEATURES_REPLY:
-				  func_cb = cc_send_features_reply;
-				  break;
-		
-			  case OFPT_GET_CONFIG_REPLY:
-				  func_cb = cc_send_get_config_reply;
+
+			  case OFPAPP_FEATURE_REQUEST:
+				  func_cb = cc_send_features_request;
 				  break;
 		
 			  // Asynchronous messages.
-			  case OFPT_PACKET_IN:
-				  func_cb = cc_send_packet_in;
+			  case OFPAPP_FLOW_MOD:
+				  func_cb = cc_send_flow_mod;
 				  break;
 		
-			  case OFPT_FLOW_REMOVED:
-				  func_cb = cc_send_flow_removed;
-				  break;
-		
-			  case OFPT_PORT_STATUS:
-				  func_cb = cc_send_port_status;
+			  case OFPAPP_PORT_MOD:
+				  func_cb = cc_send_port_mod;
 				  break;
 		
 			  // Statistics messages.
-			  case OFPT_STATS_REPLY:
-				  func_cb = cc_send_stats_reply;
-				  break;
-		
-			  // Barrier messages.
-			  case OFPT_BARRIER_REPLY:
-				  func_cb = cc_send_barrier_reply;
+			  case OFPAPP_STATS_REQUEST:
+				  func_cb = cc_send_stats_request;
 				  break;
 		
 			  // Queue Configuration messages.
-			  case OFPT_QUEUE_GET_CONFIG_REPLY:
-				  func_cb = NULL;
+			  case OFPAPP_QUEUE_STATS_REQUEST:
+				  func_cb = cc_send_queue_stats_request;
 				  break;
-		
+
+			  case OFPAPP_TABLE_STATS_REQUEST:
+				  func_cb = cc_send_table_stats_request;
+				  break;
+
+			  case OFPAPP_VENDOR_STATS_REQUEST:
+				  func_cb = cc_send_vendor_stats_request;
+				  break;
+
+			  case OFPAPP_AGGREGATE_STATS_REQUEST:
+				  func_cb = cc_send_aggregate_stats_request;
+				  break;
+
+			  case OFPAPP_FLOW_STATS_REQUEST:
+				  func_cb = cc_send_flow_stats_request;
+				  break;
+
+			  case OFPAPP_SET_CONFIG:
+				  func_cb = cc_send_set_config;
+				  break;
+
+			  case OFPAPP_GET_CONFIG_REQUEST:
+				  func_cb = cc_send_get_config_request;
+				  break;
+
+			  case OFPAPP_GET_DESC_STATS_REQUEST:
+				  func_cb = cc_send_get_desc_stats;
+				  break;
+
+			  case OFPAPP_PACKET_OUT:
+				  func_cb = cc_send_packet_out;
+				  break;
+
 			  default:
-				  assert( 0 );
+				  func_cb = NULL;
 				  break;
 		}
 

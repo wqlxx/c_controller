@@ -57,13 +57,15 @@ int main(int argc,char **argv)
 
 	cc_init_of_socket(listen_socket);
 
-	cc_waiting(sw_info_table, listen_socket);
 	//cc_init_app();
+
 	cc_init_of_socket(listen_socket);
 
-	cc_waiting(sw_info_table, listen_socket);
+	cc_polling(sw_info_table, listen_socket);
 
 	cc_finalize_of(sw_info_table,listen_socket);
-	
+
+	cc_finalize_sw_info_table(sw_info_table);
+
 	return 0;
 }

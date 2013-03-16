@@ -78,7 +78,7 @@
 #define CC_RECV_BUFFER_SIZE (UINT16_MAX+sizeof( struct ofp_packet_in )-2) 
 #define CC_MAX_SOCKET_BUFF 3*1024*1024
 #define CC_MAX_PORT 52
-#define CC_XID_MAX_ENTRIES 4096
+#define CC_XID_MAX_ENTRIES 256
 
 
 enum sw_state{
@@ -99,17 +99,14 @@ typedef struct cc_socket cc_socket;
 
 struct xid_entry {
   uint32_t xid;
-  uint32_t original_xid;
-  char *service_name;
-  int index;
   struct timeval tv;
 };
 typedef struct xid_entry xid_entry;
 
 
 struct xid_table {
-  hash_table *hash;
-  int next_index;
+  hash_table *xid_hash;
+  list_element* xid_entry_list;
 };
 typedef struct xid_table xid_table;
 
@@ -175,7 +172,7 @@ struct CThread_pool
 }; 
 typedef struct CThread_pool CThread_pool;
 
-
+#if 0
 struct event_handler{
 	event_handler_callback read_handler;
 	event_handler_callback write_handler;
@@ -183,7 +180,7 @@ struct event_handler{
 	void* write_buf;
 };
 typedef struct event_handler event_handler;
-
+#endif
 
 /*when the switch connect in,we should init the struct sw_info
 **parm: send_queue and recv_queue should be init.
@@ -213,7 +210,6 @@ struct sw_info
 	 */
 	xid_table* xid_table_;
 	uint32_t xid_latest;
-
 	/*for app func to handle the msg send to app
 	 *param: app_fd is the file description to connect to app server
 	 *param: app_server_ip is the ip address of app server

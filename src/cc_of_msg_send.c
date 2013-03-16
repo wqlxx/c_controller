@@ -201,7 +201,7 @@ cc_send_flow_mod(sw_info* cc_sw_info, buffer* buf)
 
 
 int
-cc_senf_packet_out(sw_info* cc_sw_info, buffer* buf)
+cc_send_packet_out(sw_info* cc_sw_info, buffer* buf)
 {
 	buffer* send_buf;
 	uint32_t xid;
