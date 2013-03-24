@@ -25,7 +25,9 @@
 
 #include "cc_basic.h"
 #include "cc_of_msg_prep.h"
-#include "cc_secure_channel.h"
+#include "cc_xid.h"
+#include "cc_of_err.h"
+#include "cc_of_action.h"
 
 #define OFP_ERROR_MSG_MAX_DATA 64
 

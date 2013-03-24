@@ -21,8 +21,15 @@
 #ifndef BUFFER_H
 #define BUFFER_H 1
 
-#include "cc_basic.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stddef.h>
+
+#include "cc_basic.h"
+#include "cc_utility.h"
+
 
 
 typedef struct buffer {
@@ -38,6 +45,11 @@ typedef struct buffer {
 
 #define dlf_length sizeof(buffer)
 
+static size_t front_length_of( buffer* );
+static bool	already_allocated( buffer *, size_t);
+buffer* append_front( buffer* , size_t); 
+buffer* append_back( buffer* , size_t);
+buffer* alloc_empty_data(void);
 buffer *alloc_buffer( void );
 buffer *alloc_buffer_with_length( size_t length );
 void free_buffer( buffer *buf );
@@ -45,7 +57,6 @@ void *append_front_buffer( buffer *buf, size_t length );
 void *remove_front_buffer( buffer *buf, size_t length );
 void *append_back_buffer( buffer *buf, size_t length );
 buffer *duplicate_buffer( const buffer *buf );
-void dump_buffer( const buffer *buf, void dump_function( const char *format, ... ) );
-
+//void dump_buffer( const buffer *buf, void dump_function( const char *format, ... ) );
 
 #endif // BUFFER_H

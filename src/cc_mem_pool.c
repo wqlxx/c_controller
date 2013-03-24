@@ -20,6 +20,8 @@
 #ifndef CC_MEM_POOL_H
 #define CC_MEM_POOL_H 1
 
+#include "cc_basic.h"
+
 typedef struct
 {
 	int unitsize;	//size of memory 

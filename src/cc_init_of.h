@@ -21,18 +21,14 @@
 #define CC_INIT_OF_H 1
 
 #include "cc_basic.h"
-
-static int cc_init_sw_info_table(list_element* );
+#include "cc_socket.h"
+#include "cc_single_link.h"
 
 static int cc_init_of_socket(cc_socket* );
 
-static int cc_insert_sw_info(list_element* , sw_info* );
-
-static int cc_delete_sw_info(list_element* , sw_info* );
-
 static int cc_polling(list_element* , cc_socket* );
 
-static int cc_finalize_of(list_element* , cc_socket* );
+static int cc_finalize_of_socket(sw_info* );
 
-#endif
+#endif //END OF CC_INIT_OF_H
 

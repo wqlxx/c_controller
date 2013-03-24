@@ -159,9 +159,7 @@ cc_flush_to_secure_channel(sw_info* cc_sw_info)
 			//write( cc_sw_info->cc_switch->cc_socket->fd,msg,sizeof(msg));
 			continue;
 		}
-		/*after send ,free the buf*/
-		buffer* buf = dequeue_message(message_queue * queue);
-		free_buffer(buf);
+		free_buffer(msg);
 		count++;
 	}
 	return CC_SUCCESS;

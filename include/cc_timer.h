@@ -23,9 +23,16 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <time.h>
+#include "cc_basic.h"
 
 /* ECHO TIMEOUT has no exactly define,In trema ,i see it is 60s*/
 #define CC_ECHO_MAX_INTERVAL 10 //10 use to as a connection checker
 #define CC_FEATURE_REPLY_MAX_INTERVAL 10
+
+int cc_timer_check(struct timeval* start_tv, struct timeval* now_tv);
+
+int cc_timer_start(struct timeval* tv);
+
+int cc_timer_expire(struct timeval* tv);
 
 #endif

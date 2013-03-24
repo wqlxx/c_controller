@@ -50,6 +50,8 @@ cc_insert_sw_info(list_element* sw_info_table, sw_info* cc_sw_info)
 }
 
 
+/*used to been called by find_list_custom in cc_find_sw_info
+*/
 bool
 cc_find_sw_dpid(void* data, void* user_data)
 {
@@ -72,6 +74,7 @@ cc_find_sw_info(list_element* sw_info_table, uint64_t dpid)
 
 	return find_sw_info;
 }
+
 
 static int
 cc_delete_sw_info(list_element* sw_info_table, sw_info* cc_sw_info)

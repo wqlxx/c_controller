@@ -21,7 +21,8 @@
 #ifndef CC_OF_MSG_HANDLER_H
 #define CC_OF_MSG_HANDLER_H 1
 
-#include "cc_of_msg_send.h"
+#include "cc_secure_channel_recv.h"
+#include "cc_secure_channel_send.h"
 #include "cc_basic.h"
 
 struct msg_for_app {
@@ -31,6 +32,16 @@ struct msg_for_app {
 typedef struct msg_for_app msg_for_app;
 
 
+
+int  cc_of_handler_recv_event(sw_info* cc_sw_info);
+
+int cc_of_handler_send_event(sw_info* cc_sw_info);
+
+int cc_of_handler_recv_app_request(uint8_t type_, buffer* buf);
+
+int cc_of_handler_send_to_app(message_queue* app_queue);
+
+#if 0
 int cc_event_recv_hello(sw_info*, buffer*);
 
 int cc_event_recv_feature_reply(sw_info*, uint32_t);
@@ -40,6 +51,6 @@ int cc_event_recv_echo_reply(sw_info*, buffer*);
 int cc_evnet_recv_echo_request(sw_info*, uint32_t, buffer*);
 
 int cc_event_send_msg(buffer* );
+#endif //END OF 0
 
-
-#endif
+#endif//END OF CC_OF_MSG_HANDLER_H

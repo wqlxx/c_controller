@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "cc_basic.h"
+#include "cc_init_of.h"
 
 
 /*
@@ -41,23 +41,15 @@ cc_init_of_socket(cc_socket* cc_socket_)
 
 
 static int
-cc_init_xid_table(sw_info* cc_sw_info)
-{
-	int ret;
-	cc_sw_info->xid_latest = 0;
-	ret = cc_init_xid_table_(cc_sw_info);
-	if( ret < 0 )
-	{
-		log_err_for_cc("cc_init_xid_table failed");
-		return CC_ERROR;
-	}
-
-	return CC_SUCCESS;
+cc_finalize_of_socket(int fd)
+{
+	close(fd);
+	return 0;
 }
 
 
 static int
-cc_polling(list_element* sw_info_table, cc_socket* cc_socket_)
+cc_polling(cc_socket* cc_socket_)
 {
 	int ret;
 	fd_set listen_fdset;
@@ -82,49 +74,19 @@ cc_polling(list_element* sw_info_table, cc_socket* cc_socket_)
 		}else{
 			if(FD_ISSET(cc_socket->fd, &listen_fdset))
 			{
-				sw_info *cc_sw_info = (sw_info*)malloc(sizeof(sw_info));
+				sw_info *cc_sw_info;
 				ret = cc_conn_accept(cc_socket_ , cc_sw_info);
 				if( ret < 0 ){
 					log_err_for_cc("accept failed!");
 					return CC_ERROR;
 				}
-				ret = cc_insert_sw_info(sw_info_table, cc_sw_info);
+				//ret = cc_insert_sw_info(sw_info_table, cc_sw_info);
 				if( ret < 0 ){
 					return CC_ERROR;
 				}
 			}
 		}
 	}
-	return CC_SUCCESS;
-}
-
-
-void
-cc_finalize_connect_socket(sw_info* cc_sw_info)
-{
-	close(cc_sw_info->cc_switch->cc_socket->fd);
-}
-
-
-void
-cc_finalize_message_queue(sw_info* cc_sw_info)
-{
-	delete_message_queue(cc_sw_info->app_recv_queue);
-	delete_message_queue(cc_sw_info->app_send_queue);
-	delete_message_queue(cc_sw_info->recv_queue);
-	delete_message_queue(cc_sw_info->send_queue);
-	return;
-}
-
-
-static int
-cc_finalize_of(sw_info* cc_sw_info)
-{
-	cc_finalize_connect_socket(cc_sw_info);
-	cc_finalize_xid_table(cc_sw_info);
-	cc_finalize_message_queue(cc_sw_info);
-	free(cc_sw_info);
-	
 	return CC_SUCCESS;
 }
 

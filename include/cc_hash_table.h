@@ -43,11 +43,11 @@
 
 
 #ifndef HASH_TABLE_H
-#define HASH_TABLE_H
+#define HASH_TABLE_H 1
 
 
-#include "doubly_linked_list.h"
-
+#include "cc_basic.h"
+#include "cc_double_link.h"
 
 /**
  * The function is passed a key and should return a unsigned int hash

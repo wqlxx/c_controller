@@ -1,8 +1,9 @@
 /*
- * cc_secure_channel_send functions.
+ * bool type definition.
  *
- * Author: qiang wang <wqlxx@yahoo.com.cn>
+ * Author: Yasuhito Takamiya <yasuhito@gmail.com>
  *
+ * Copyright (C) 2008-2012 NEC Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -17,26 +18,33 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
- 
-#ifndef CC_SOCKET_H
-#define CC_SOKERT_H 1
-
-#include "cc_basic.h"
-#include "cc_xid.h"
-#include "cc_get_local_ip.h"
-#include "cc_of_msg_handler.h"
 
 
-#define CC_LISTEN_PORT 6633
-#define CC_LENGTH_OF_LISTEN_QUEUE 20
-//#define CC_TRY_CONN_TIMES 5
-#define CC_ACCEPT_FD 3
-#define CC_CHILD 1
-#define CC_PARENT 0
+#ifndef CC_BOOL_H
+#define CC_BOOL_H 1
 
 
-int cc_close_socket(struct cc_socket *);
-static int cc_conn_accept(cc_socket*  ,sw_info* );
-static int cc_init_listenfd(cc_socket* );
-int cc_client_socket_create(char *server_ip, uint16_t port);
+#ifdef __cplusplus
+// use C++ built-in bool type
+#elif defined __STDC__ && defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L
+// have a C99 compiler
+#include <stdbool.h>
+#else
+// do not have a C99 compiler
+typedef enum bool {
+  false = 0,
+  true,
+} bool;
 #endif
+
+
+#endif // BOOL_H
+
+
+/*
+ * Local variables:
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * End:
+ */
+

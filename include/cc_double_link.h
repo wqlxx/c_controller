@@ -53,7 +53,8 @@
 #define DOUBLY_LINKED_LIST_H
 
 
-#include "bool.h"
+#include "cc_bool.h"
+#include "cc_basic.h"
 
 
 /**

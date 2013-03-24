@@ -20,9 +20,7 @@
 
 #include <assert.h>
 #include <pthread.h>
-#include "doubly_linked_list.h"
-#include "wrapper.h"
-
+#include "cc_double_link.h"
 
 typedef struct private_dlist_element {
   dlist_element public;
@@ -49,7 +47,7 @@ create_dlist_with_mutex( pthread_mutex_t *mutex ) {
  * @return a pointer to the newly-allocated dlist_element.
  */
 dlist_element *
-create_dlist() {
+create_dlist(void) {
   private_dlist_element *element = ( private_dlist_element * ) create_dlist_with_mutex( NULL );
 
   pthread_mutexattr_t attr;

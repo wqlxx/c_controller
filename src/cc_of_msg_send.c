@@ -16,8 +16,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
-#include "xid_table.h"
 #include "cc_of_msg_send.h"
 
 int
@@ -68,7 +66,7 @@ cc_send_echo_reply(sw_info* cc_sw_info,buffer *buf )
 
   ret = cc_send_to_secure_channel( sw_info, buf );
   if ( ret == 0 ) {
-    debug( "Send 'echo reply' to a switch %#" PRIx64 ".", sw_info->datapath_id );
+    //debug( "Send 'echo reply' to a switch %#" PRIx64 ".", sw_info->datapath_id );
   }
 
   return ret;
@@ -89,7 +87,7 @@ cc_send_features_request( sw_info* cc_sw_info,buffer* buf )
 
   ret = cc_send_to_secure_channel( sw_info, buf );
   if ( ret == 0 ) {
-    debug( "Send 'features request' to a switch. fd:%d", sw_info->secure_channel_fd );
+    //debug( "Send 'features request' to a switch. fd:%d", sw_info->secure_channel_fd );
   }
 
   free_buffer()
@@ -120,7 +118,7 @@ cc_send_set_config(sw_info *cc_sw_info, buffer* buf)
   
   // default switch configuration
   uint16_t config_flags = OFPC_FRAG_NORMAL;
-  int16_t miss_send_len = UINT16_MAX;
+  int16_t miss_send_len = USHRT_MAX;
 
   
   msg = cc_create_set_config( xid, config_flags,
@@ -128,7 +126,7 @@ cc_send_set_config(sw_info *cc_sw_info, buffer* buf)
 
   ret = cc_send_to_secure_channel( sw_info, buf );
   if ( ret == 0 ) {
-    debug( "Send 'set config request' to a switch %#" PRIx64 ".", sw_info->datapath_id );
+    //debug( "Send 'set config request' to a switch %#" PRIx64 ".", sw_info->datapath_id );
   }
 
   free_buffer(buf);

@@ -18,8 +18,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-
-#include "cc_basic.h"
 #include "cc_socket.h"
 
 
@@ -124,7 +122,7 @@ cc_server_conn_create(struct cc_socket *cc_socket)
 	return cc_socket->fd;
 }
 
-/*
+
 int
 cc_client_socket_create(char *server_ip, uint16_t port)
 {
@@ -144,18 +142,19 @@ cc_client_socket_create(char *server_ip, uint16_t port)
         return -1;
     }
 
+	
+    cc_set_socket_nonblocking(fd);
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));    
+
     memset(sin.sin_zero, 0, sizeof sin.sin_zero);
     if (connect(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) {
         perror("connect");
         return -1;
     }
 
-    cc_make_socket_nonblocking(fd);
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));    
-
     return fd;
 }
-*/
+
 
 int 
 cc_close_socket(struct cc_socket *cc_socket)
@@ -211,6 +210,37 @@ cc_init_listenfd(cc_socket* cc_socket)
 		return CC_SUCCESS;
 }
 
+
+static int
+cc_init_sw_info(sw_info* cc_sw_info)
+{
+
+	cc_sw_info = (sw_info*)malloc(sizeof(cc_sw_info));
+	cc_sw_info->xid = 0;
+	cc_sw_info->recv_queue = create_message_queue();
+	cc_sw_info->send_queue = create_message_queue();
+	pool_init(cc_sw_info->cc_recv_thread_pool, CC_MAX_THREAD_NUM);
+	cc_sw_info->state = CC_CONNECT;
+	cc_init_xid_table(cc_sw_info);
+	cc_sw_info->xid_latest = 0;
+	cc_sw_info->config_flags = CC_MAX_THREAD_NUM;
+	cc_sw_info->miss_send_len = OFP_DEFAULT_MISS_SEND_LEN;
+	
+	return CC_SUCCESS;
+}
+
+
+static int
+cc_finalize_sw_info(cc_sw_info)
+{
+	delete_message_queue(cc_sw_info->recv_queue);
+	delete_message_queue(cc_sw_info->send_queue);
+	pool_destroy(cc_sw_info->cc_recv_thread_pool);
+
+	return CC_SUCCESS;
+}
+
+
 static int 
 cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 {
@@ -234,21 +264,8 @@ cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 		cc_set_recvbuf(accept_fd,CC_MAX_SOCKET_BUFF);
 		cc_set_socket_nodelay(accept_fd);
 	}
-
-	/*create a new 'sw_info' after a success 'fork',after the switch leave ,we nend to free the space*/
-	/*
-	sw_info *new_sw_info = (sw_info *)malloc(sizeof(sw_info));
-	new_sw_info->cc_switch.cc_socket.cc_addr.sin_family = switch_addr.sin_family;
-	new_sw_info->cc_switch.cc_socket.cc_addr.sin_port = switch_addr.sin_port;
-	new_sw_info->cc_switch.cc_socket.cc_addr.sin_addr.s_addr = switch_addr.sin_addr.s_addr;
-	*/
-	cc_sw_info->cc_switch->cc_socket->fd = accept_fd;
-	cc_sw_info->cc_switch->cc_socket->cc_addr = switch_addr;
 	
 	pid = fork();
-	//cc_sw_info->cc_switch->pid = pid;
-	//cc_sw_queue->head->next = new_sw_info;
-	
 	if(pid < 0)
 	{
 		//TODO: close the listen socket
@@ -260,14 +277,21 @@ cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 
 	if(pid == 0)
 	{
-		//int child_pid = getpid();
 		int child_tmp = tmp;
-		//cc_switch_proc.cc_sock[child_tmp].pid = child_pid;
+		sw_info* cc_sw_info;
+		cc_init_sw_info(cc_sw_info);
+
+		cc_sw_info->cc_switch->pid = getpid();
+		/*here we can add a function to build
+		 *a file to restore the cc_sw_info with 
+		 *a special name, such as "sw_$pid.txt".
+		 *then main loop can throught search these files
+		 *to make a list which can be used to build a virtual network manager
+	     */
+		cc_sw_info->cc_switch->cc_socket->fd = accept_fd;
+		cc_sw_info->cc_switch->cc_socket->cc_addr = switch_addr;
 		close( cc_switch_table->listen_socket.fd );
 
-		//sw_info *cc_sw_info = (sw_info *)malloc(sizeof(sw_info));
-		//cc_sw_info->cc_switch.pid = getpid();
-		//cc_sw_info->cc_switch
 		if( accept_fd < CC_ACCEPT_FD)
 		{
 			dup2(accept_fd,CC_ACCEPT_FD);//avoid the fd is smaller than 3,0 is for standard input, 
@@ -275,16 +299,6 @@ cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 			close(accept_fd);
 			accept_fd = CC_ACCEPT_FD;
 		}
-
-	
-		/*cc_send_hello(cc_socket);//after accept directly send heelo msg to switch?
-		 *cc_send_feature_request
-		 *cc_send_echo_request
-		 */
-		
-		/*FUNC:pool_int():
-		 * after fork,we create the threads in the child process,to handle thr 'read' and 'write'
-		 */
 
 		struct timeval timeout;
 		fd_set writefds;
@@ -316,10 +330,14 @@ cc_conn_accept(cc_socket* cc_socket_ ,sw_info* cc_sw_info)
 					//cc_flush_to_secure_channel(cc_sw_info);
 			}
 		}
+		cc_finalize_sw_info(cc_sw_info);
 		return CC_SUCCESS;
+		/*may be we should throw a signal to parent to delete the
+		*the record of this switch 
+		*/
 	}else{
 		/* this is parent*/
-		cc_sw_info->cc_switch->pid = pid;
+		//cc_sw_info->cc_switch->pid = pid;
 		close(accept_fd);
 		return CC_SUCCESS;
 	}

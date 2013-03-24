@@ -30,18 +30,16 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "bool.h"
-#include "checks.h"
-#include "log.h"
-#include "trema_wrapper.h"
-#include "utility.h"
+#include "cc_bool.h"
+#include "cc_log.h"
+#include "cc_utility.h"
 
 
 static void
 _die( const char *format, ... ) {
   char err[ 1024 ];
 
-  assert( format != NULL );
+  //assert( format != NULL );
   va_list args;
   va_start( args, format );
   vsnprintf( err, sizeof( err ), format, args );
@@ -147,9 +145,9 @@ string_to_datapath_id( const char *str, uint64_t *datapath_id ) {
 
 static bool
 append_string( char *buf, size_t length, const char *string ) {
-  assert( buf != NULL );
-  assert( length > 0 );
-  assert( string != NULL );
+  //assert( buf != NULL );
+  //assert( length > 0 );
+  //assert( string != NULL );
 
   size_t current_length = strlen( buf );
   size_t length_to_append = strlen( string );
@@ -164,8 +162,8 @@ append_string( char *buf, size_t length, const char *string ) {
 
 bool
 wildcards_to_string( uint32_t wildcards, char *str, size_t size ) {
-  assert( str != NULL );
-  assert( size > 0 );
+  //assert( str != NULL );
+  //assert( size > 0 );
 
   memset( str, '\0', size );
 
@@ -234,8 +232,8 @@ wildcards_to_string( uint32_t wildcards, char *str, size_t size ) {
 
 bool
 match_to_string( const struct ofp_match *match, char *str, size_t size ) {
-  assert( match != NULL );
-  assert( str != NULL );
+  //assert( match != NULL );
+  //assert( str != NULL );
 
   char wildcards_str[ 256 ];
   char nw_src[ 16 ];
@@ -288,8 +286,8 @@ match_to_string( const struct ofp_match *match, char *str, size_t size ) {
 
 bool
 phy_port_to_string( const struct ofp_phy_port *phy_port, char *str, size_t size ) {
-  assert( phy_port != NULL );
-  assert( str != NULL );
+  //assert( phy_port != NULL );
+  //assert( str != NULL );
 
   memset( str, '\0', size );
 
@@ -316,8 +314,8 @@ phy_port_to_string( const struct ofp_phy_port *phy_port, char *str, size_t size 
 
 static bool
 action_output_to_string( const struct ofp_action_output *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "output: port=%u max_len=%u", action->port, action->max_len );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -330,8 +328,8 @@ action_output_to_string( const struct ofp_action_output *action, char *str, size
 
 static bool
 action_set_vlan_vid_to_string( const struct ofp_action_vlan_vid *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "set_vlan_vid: vlan_vid=%#x", action->vlan_vid );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -344,8 +342,8 @@ action_set_vlan_vid_to_string( const struct ofp_action_vlan_vid *action, char *s
 
 static bool
 action_set_vlan_pcp_to_string( const struct ofp_action_vlan_pcp *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "set_vlan_pcp: vlan_pcp=%#x", action->vlan_pcp );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -359,8 +357,8 @@ action_set_vlan_pcp_to_string( const struct ofp_action_vlan_pcp *action, char *s
 static bool
 action_strip_vlan_to_string( const struct ofp_action_header *action, char *str, size_t size ) {
   UNUSED( action );
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "strip_vlan" );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -373,8 +371,8 @@ action_strip_vlan_to_string( const struct ofp_action_header *action, char *str, 
 
 static bool
 action_dl_addr_to_string( const struct ofp_action_dl_addr *action, char *str, size_t size, uint16_t type ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "set_dl_%s: dl_addr=%02x:%02x:%02x:%02x:%02x:%02x",
                       type == OFPAT_SET_DL_SRC ? "src" : "dst",
@@ -402,8 +400,8 @@ action_set_dl_dst_to_string( const struct ofp_action_dl_addr *action, char *str,
 
 static bool
 action_nw_addr_to_string( const struct ofp_action_nw_addr *action, char *str, size_t size, uint16_t type ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   struct in_addr addr;
   addr.s_addr = htonl( action->nw_addr );
@@ -434,8 +432,8 @@ action_set_nw_dst_to_string( const struct ofp_action_nw_addr *action, char *str,
 
 static bool
 action_set_nw_tos_to_string( const struct ofp_action_nw_tos *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "set_nw_tos: nw_tos=%#x", action->nw_tos );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -448,8 +446,8 @@ action_set_nw_tos_to_string( const struct ofp_action_nw_tos *action, char *str, 
 
 static bool
 action_tp_port_to_string( const struct ofp_action_tp_port *action, char *str, size_t size, uint16_t type ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "set_tp_%s: tp_port=%u",
                       type == OFPAT_SET_TP_SRC ? "src" : "dst", action->tp_port );
@@ -475,8 +473,8 @@ action_set_tp_dst_to_string( const struct ofp_action_tp_port *action, char *str,
 
 static bool
 action_enqueue_to_string( const struct ofp_action_enqueue *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "enqueue: port=%u queue_id=%u", action->port, action->queue_id );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -489,8 +487,8 @@ action_enqueue_to_string( const struct ofp_action_enqueue *action, char *str, si
 
 static bool
 action_vendor_to_string( const struct ofp_action_vendor_header *action, char *str, size_t size ) {
-  assert( action != NULL );
-  assert( str != NULL );
+  //assert( action != NULL );
+  //assert( str != NULL );
 
   int ret = snprintf( str, size, "vendor: vendor=%#x", action->vendor );
   if ( ( ret >= ( int ) size ) || ( ret < 0 ) ) {
@@ -503,10 +501,10 @@ action_vendor_to_string( const struct ofp_action_vendor_header *action, char *st
 
 bool
 actions_to_string( const struct ofp_action_header *actions, uint16_t actions_length, char *str, size_t str_length ) {
-  assert( actions != NULL );
-  assert( str != NULL );
-  assert( actions_length > 0 );
-  assert( str_length > 0 );
+  //assert( actions != NULL );
+  //assert( str != NULL );
+  //assert( actions_length > 0 );
+  //assert( str_length > 0 );
 
   memset( str, '\0', str_length );
 
@@ -581,7 +579,7 @@ actions_to_string( const struct ofp_action_header *actions, uint16_t actions_len
 
 uint16_t
 get_checksum( uint16_t *pos, uint32_t size ) {
-  assert( pos != NULL );
+  //assert( pos != NULL );
 
   uint32_t csum = 0;
   for (; 2 <= size; pos++, size -= 2 ) {

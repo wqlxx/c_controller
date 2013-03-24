@@ -16,9 +16,10 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */#include "cc_get_local_ip.h"
+ */
+ #include "cc_get_local_ip.h"
 
-in_addr_t get_local_ip_main()
+in_addr_t get_local_ip_main(void)
 {
 	in_addr_t cc_s_addr;
     /* 建立IPv4的UDP套接字fd */

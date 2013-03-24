@@ -30,14 +30,7 @@
  * advertising or publicity pertaining to the Software or any
  * derivatives without specific, written prior permission.
  */
-#include "config.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <sys/time.h>
-
-#include "random.h"
+#include "cc_random.h"
 
 void
 cc_random_init(void)
@@ -73,7 +66,7 @@ cc_random_uint8(void)
 uint16_t
 cc_random_uint16(void)
 {
-    if (RAND_MAX >= UINT16_MAX) {
+    if (RAND_MAX >= USHRT_MAX) {
         cc_random_init();
         return rand();
     } else {

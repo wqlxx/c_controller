@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "bool.h"
+#include "cc_bool.h"
 #include "openflow.h"
 
 

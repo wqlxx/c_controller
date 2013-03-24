@@ -23,6 +23,8 @@
 
 #include "cc_basic.h"
 #include "cc_of_msg_recv.h"
+#include "queue.h"
+#include "cc_thread_pool.h"
 
 struct cc_writev_args {
 	struct iovec *iov;
@@ -30,21 +32,15 @@ struct cc_writev_args {
 };
 typedef struct cc_writev_args cc_writev_args;
 
-typedef int (*FUNC_CB)(sw_info*, buffer*);
+typedef int (*FUNC_CB)(sw_info* cc_sw_info, buffer* buf);
 
-FUNC_CB cc_select_handler(uint16_t );
+FUNC_CB cc_select_handler(uint16_t type);
 
-static int cc_ofpmsg_handle(sw_info*, buffer*);
+static int cc_secure_channel_read(sw_info* cc_sw_info);
 
-static int cc_recv_from_secure_channel(sw_info* );
+static int cc_recv_from_secure_channel(sw_info *cc_sw_info);
 
-static int cc_secure_channle_read(sw_info* );
-
-static int cc_append_to_writev_args( buffer *, void *);
-
-static int cc_send_to_secure_channel(sw_info* ,buffer*);
-
-static int cc_flush_to_secure_channel(sw_info* cc_sw_info)
+static int cc_ofpmsg_handle(sw_info* cc_sw_info,buffer* buf);
 
 #endif
 

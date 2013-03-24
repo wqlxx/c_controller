@@ -19,7 +19,7 @@
 
 
 #include <assert.h>
-#include <openflow.h>
+#include "openflow.h"
 #include <string.h>
 //#include "trema.h"
 #include "cc_xid.h"
@@ -73,7 +73,7 @@ cc_free_xid_entry_(void* data, void* user_data)
 
 
 void
-cc_init_xid_table_( sw_info* cc_sw_info ) {
+cc_init_xid_table( sw_info* cc_sw_info ) {
 
   log_debug_for_cc("cc_init_xid_table_");
   //memset( &cc_sw_info->xid_table_, 0, sizeof( xid_table ) );
@@ -100,7 +100,7 @@ cc_insert_xid_entry( sw_info* cc_sw_info ) {
  	log_info_for_cc("insert xid entry");
 
 	new_entry = cc_allocate_xid_entry(cc_sw_info);
-	list_element* new_list_e = malloc(sizeof(link_element));
+	list_element* new_list_e = malloc(sizeof(list_element));
 	if( cc_sw_info->xid_table_->xid_entry_list == NULL )
 	{
 		new_list_e->data = (void*)new_entry;

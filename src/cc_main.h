@@ -20,7 +20,7 @@
 #ifndef CC_MAIN_H
 #define CC_MAIN_H 1
 
+#include "cc_basic.h"
 #include "cc_init_of.h"
-#include "cc_log.h"
 
 #endif

@@ -22,8 +22,10 @@
 #define CC_OF_HANDLER_H 1
 
 #include "cc_basic.h"
-#include "cc_of_msg_handler.h"
-#include "cc_of_msg_err.h"
+#include "cc_of_err.h"
+#include "cc_of_msg_prep.h"
+#include "cc_of_action.h"
+#include "cc_xid.h"
 
 struct flow {
     uint32_t            nw_src;            /* IP source address. */
@@ -44,30 +46,39 @@ struct flow {
 
 /*declear the recv function
 */
-int cc_recv_hello_msg(sw_info * ,buffer * );
+static int cc_insert_to_send_queue(sw_info* cc_sw_info,buffer* buf);
 
-int cc_recv_features_reply(sw_info * ,buffer * );
+static int cc_insert_to_app_queue(sw_info* cc_sw_info, buffer* buf);
 
-int cc_recv_echo_request(sw_info * ,buffer * );
+char* cc_dump_flow(struct flow* flow,uint32_t wildcards);
 
-int cc_recv_echo_request(sw_info * ,buffer * );
+static int cc_recv_err_msg(sw_info* cc_sw_info,buffer* buf);
 
-int cc_recv_vendor(sw_info * ,buffer * );
+static int cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf);
 
-int cc_recv_get_config_reply(sw_info * ,buffer * );
+static int cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf);
 
-int cc_recv_flow_removed(sw_info * ,buffer * );
+static int cc_recv_hello_msg(sw_info* cc_sw_info,buffer* buf);
 
-int cc_recv_stats_reply(sw_info * ,buffer * );
+static int cc_recv_vendor(sw_info* cc_sw_info, buffer* buf);
 
-int cc_recv_barrier_reply(sw_info * ,buffer * );
+static int cc_recv_flow_removed(sw_info* cc_sw_info, buffer* buf);
 
-int cc_recv_packet_in(sw_info * ,buffer * );
+static int cc_recv_get_config_reply(sw_info* cc_sw_info, buffer* buf);
 
-int cc_recv_err_msg(sw_info * ,buffer * );
+static int cc_recv_barrier_reply(sw_info* cc_sw_info, buffer* buf);
 
-int cc_recv_port_status(sw_info * ,buffer * );
+static int cc_recv_features_reply(sw_info* cc_sw_info, buffer* buf);
 
+static int cc_recv_packet_in(sw_info* cc_sw_info,buffer* buf);
+
+static int cc_recv_port_status(sw_info* cc_sw_info, buffer* buf);
+
+static int cc_recv_stats_reply(sw_info* cc_sw_info, buffer* buf);
+
+static int cc_recv_flow_stats_reply(sw_info* cc_sw_info, buffer* buf);
+
+static int cc_process_phy_port(sw_info* cc_sw_info, struct ofp_phy_port* port, uint8_t reason);
 
 /*
 typedef void (*ofp_handler_t)(sw_info *cc_sw_info, buffer *b);
@@ -125,6 +136,6 @@ do {                                                                            
     }                                                                           \
     return h[type].handler(sw, (void *)b);                                      \
 } while(0)
-#endif	
+#endif	//end of 0
 	
-#endif
+#endif //end of cc_of_msg_recv

@@ -27,31 +27,37 @@
 #include <malloc.h>
 #include <assert.h>
 #include <pthread.h>
-#include <arpa/inet.h>
-#include <assert.h>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <signal.h>
+#include <limits.h>
+#include <float.h>
 
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 
+#include "cc_log.h"
+
+#if 0
 #include "cc_init_of.h"
 #include "cc_socket.h"
-#include "cc_log.h"
-#include "cc_xid.h"
 #include "cc_utility.h"
 #include "cc_double_link.h"
 #include "cc_single_link.h"
-#include "cc_xid.h"
-#include "cc_double_link.h"
-#include "cc_single_link.h"
-#include "cc_get_local_ip.h"
 #include "cc_hash_table.h"
-
+#include "cc_bool.h"
+#include "cc_buffer.h"
+#include "cc_bool.h"
+#include "cc_byte_order.h"
+#endif
 
 #define CC_ERROR -1
 #define CC_SUCCESS 0
@@ -75,7 +81,7 @@
 
 #define CC_TIMEOUT_FOR_HELLO 5
 #define CC_TIMEOUT_FOR_ECHO_REPLY 5
-#define CC_RECV_BUFFER_SIZE (UINT16_MAX+sizeof( struct ofp_packet_in )-2) 
+#define CC_RECV_BUFFER_SIZE (USHRT_MAX+sizeof( struct ofp_packet_in )-2) 
 #define CC_MAX_SOCKET_BUFF 3*1024*1024
 #define CC_MAX_PORT 52
 #define CC_XID_MAX_ENTRIES 256
@@ -148,7 +154,8 @@ typedef struct ofmsg_buf ofmsg_buf;
 
 struct worker   
 {   
-    void *(*process) (void *arg);   
+	void (*process)(void* arg, void* arg_);
+    //void *(*process) (void *arg);   
     void *arg;/*回调函数的参数,recv_ofmsg*/  
     struct worker *next;   
 };   
@@ -194,15 +201,13 @@ struct sw_info
 	pthreat_t cc_sw_thread[CC_MAX_THREAD_NUM];
 
 	//uint64_t datapathid;
-	CThread_pool cc_recv_thread_pool;
+	CThread_pool* cc_recv_thread_pool;
 	//CThread_pool cc_send_thread_pool;	
 
 	sw_state state;
 
 	message_queue *send_queue;
   	message_queue *recv_queue;
-
-	event_handler eh;
 	
 	/* for xid hsah table
 	 * param: xid_latest should be init to zero
@@ -215,10 +220,10 @@ struct sw_info
 	 *param: app_server_ip is the ip address of app server
 	 *param: message to restore the app_msg to send to app server
 	 */
-	int app_fd;
+	/*int app_fd;
 	char* app_server_ip;
 	message_queue *app_recv_queue;
-	message_queue *app_send_queue;
+	message_queue *app_send_queue;*/
 
 	/*set config*/
 	uint16_t config_flags;        // OFPC_* flags

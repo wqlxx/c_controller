@@ -46,11 +46,10 @@
 
 
 #ifndef LINKED_LIST_H
-#define LINKED_LIST_H
+#define LINKED_LIST_H 1
 
-
-#include "bool.h"
-
+#include "cc_bool.h"
+#include "cc_basic.h"
 
 /**
  * The list_element struct is used for each element in the linked
@@ -68,7 +67,7 @@ bool insert_before( list_element **head, const void *sibling, void *data );
 bool append_to_tail( list_element **head, void *data );
 unsigned int list_length_of( const list_element *head );
 void iterate_list( list_element *head, void function( void *data, void *user_data ), void *user_data );
-void *find_list_custom( list_element *head, bool function( void *data, void *user_data ), void *user_data );
+void *find_list_custom( list_element *head, bool (*function)( void *data, void *user_data ), void *user_data );
 bool delete_element( list_element **head, const void *data );
 bool delete_list( list_element *head );
 

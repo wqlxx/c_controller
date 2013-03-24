@@ -35,7 +35,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "c_util.h"
+#include "cc_utility.h"
 
 #define ETH_ADDR_LEN           6
 

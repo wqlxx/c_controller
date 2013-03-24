@@ -21,16 +21,11 @@
 #define CC_OF_MSG_ACTION 1
 
 #include "cc_basic.h"
-
-struct link_element {
-	struct link_element* next;
-	void* data;
-};
-typedef struct link_element link_element;
+#include "cc_single_link.h"
 
 struct openflow_actions {
   int n_actions;
-  link_element *link;
+  list_element *list;
 };
 typedef struct openflow_actions openflow_actions ;
 

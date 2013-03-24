@@ -75,9 +75,7 @@ pool_add_worker (CThread_pool* pool,void *(*process) (void *,void* ), void *arg)
          pool->queue_head = newworker;   
      }   
   
-  
      assert (pool->queue_head != NULL);   
-  
   
      pool->cur_queue_size++;   
      pthread_mutex_unlock (&(pool->queue_lock));   
@@ -86,15 +84,13 @@ pool_add_worker (CThread_pool* pool,void *(*process) (void *,void* ), void *arg)
 }   
   
 int
-pool_destroy (CThread_pool* pool,)   
+pool_destroy (CThread_pool* pool)   
 {   
     if (pool->shutdown)   
         return -1;/*防止两次调用*/  
      pool->shutdown = 1;   
-  
-  
+    
      pthread_cond_broadcast (&(pool->queue_ready));   
-  
   
     int i;   
     for (i = 0; i < pool->max_thread_num; i++)   
@@ -114,7 +110,7 @@ pool_destroy (CThread_pool* pool,)
         
      free (pool);   
      pool=NULL;   
-    return 0;   
+     return 0;   
 }   
 
 void*
@@ -140,29 +136,20 @@ thread_routine (void *arg)
              pthread_exit (NULL);   
         }     
   
-        printf ("thread 0x%x is starting to work\n", pthread_self ());   
-  
-        assert (pool->cur_queue_size != 0);   
-        assert (pool->queue_head != NULL);   
-            
+        //printf ("thread 0x%x is starting to work\n", pthread_self ());   
+              
         pool->cur_queue_size--;   
         CThread_worker *worker = pool->queue_head;   
         pool->queue_head = worker->next;   
         pthread_mutex_unlock (&(pool->queue_lock));   
   
-  
-		//pthread_mutex_lock(&(woker->work_lock));
-		/*add the trans of work->arg to 
-		 *    typedef struct{
-		 *			sw_info* cc_sw_info;
-		 *			buffer* buf;
-		 *	  }worker_buf;
-		 */
-		worker_buf* tmp_buf 
+		worker_buf* tmp_buf;
 		tmp_buf = (worker_buf*)(worker->arg);
-        (*(worker->process)) (worker->arg);  
+        (*(worker->process)) (tmp_buf->cc_sw_info, tmp_buf->buf);  
 		//pthread_mutex_unlock(&(woker->work_lock));
-        free (worker);   
+		free(tmp_buf);
+		free(worker->arg);
+        free(worker);   
         worker = NULL;   
      }   
      pthread_exit (NULL);   

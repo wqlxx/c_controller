@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "cc_of_msg_err.h"
+#include "cc_of_err.h"
 
 static int
 validate_header( const buffer *message, const uint8_t type,
@@ -74,7 +74,7 @@ validate_error( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_ERROR, sizeof( struct ofp_error_msg ), UINT16_MAX );
+  ret = validate_header( message, OFPT_ERROR, sizeof( struct ofp_error_msg ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -90,7 +90,7 @@ validate_echo_request( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_ECHO_REQUEST, sizeof( struct ofp_header ), UINT16_MAX );
+  ret = validate_header( message, OFPT_ECHO_REQUEST, sizeof( struct ofp_header ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -111,7 +111,7 @@ validate_echo_reply( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_ECHO_REPLY, sizeof( struct ofp_header ), UINT16_MAX );
+  ret = validate_header( message, OFPT_ECHO_REPLY, sizeof( struct ofp_header ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -132,7 +132,7 @@ validate_vendor( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_VENDOR, sizeof( struct ofp_vendor_header ), UINT16_MAX );
+  ret = validate_header( message, OFPT_VENDOR, sizeof( struct ofp_vendor_header ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -227,7 +227,7 @@ validate_features_reply( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_FEATURES_REPLY, sizeof( struct ofp_switch_features ), UINT16_MAX );
+  ret = validate_header( message, OFPT_FEATURES_REPLY, sizeof( struct ofp_switch_features ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -316,7 +316,7 @@ validate_packet_in( const buffer *message ) {
 
   assert( message != NULL );
 
-  ret = validate_header( message, OFPT_PACKET_IN, offsetof( struct ofp_packet_in, data ), UINT16_MAX );
+  ret = validate_header( message, OFPT_PACKET_IN, offsetof( struct ofp_packet_in, data ), USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -357,7 +357,7 @@ validate_wildcards( const uint32_t wildcards ) {
 
 static int
 validate_vlan_vid( const uint16_t vid ) {
-  if ( ( vid != UINT16_MAX ) && ( ( vid & ~VLAN_VID_MASK ) != 0 ) ) {
+  if ( ( vid != USHRT_MAX ) && ( ( vid & ~VLAN_VID_MASK ) != 0 ) ) {
     return ERROR_INVALID_VLAN_VID;
   }
 
@@ -438,7 +438,7 @@ validate_flow_removed( const buffer *message ) {
 
   // flow_removed->cookie
 
-  if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_removed->priority ) != UINT16_MAX ) ) {
+  if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_removed->priority ) != USHRT_MAX ) ) {
     return ERROR_INVALID_FLOW_PRIORITY;
   }
 
@@ -492,7 +492,7 @@ validate_packet_out( const buffer *message ) {
   assert( message != NULL );
 
   ret = validate_header( message, OFPT_PACKET_OUT, offsetof( struct ofp_packet_out, actions ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -533,7 +533,7 @@ validate_flow_mod( const buffer *message ) {
   assert( message != NULL );
 
   ret = validate_header( message, OFPT_FLOW_MOD, offsetof( struct ofp_flow_mod, actions ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -556,7 +556,7 @@ validate_flow_mod( const buffer *message ) {
   // flow_mod->idle_timeout
   // flow_mod->hard_timeout
 
-  if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_mod->priority ) != UINT16_MAX ) ) {
+  if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_mod->priority ) != USHRT_MAX ) ) {
     return ERROR_INVALID_FLOW_PRIORITY;
   }
 
@@ -865,7 +865,7 @@ validate_vendor_stats_request( const buffer *message ) {
 
   ret = validate_header( message, OFPT_STATS_REQUEST,
                          offsetof( struct ofp_stats_request, body ) + sizeof( uint32_t ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -954,7 +954,7 @@ validate_flow_stats_reply( const buffer *message ) {
   assert( message != NULL );
 
   ret = validate_header( message, OFPT_STATS_REPLY, offsetof( struct ofp_stats_reply, body ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -983,7 +983,7 @@ validate_flow_stats_reply( const buffer *message ) {
     // flow_stats->duration_sec
     // flow_stats->duration_nsec
 
-    if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_stats->priority ) < UINT16_MAX ) ) {
+    if ( ( ( match.wildcards & OFPFW_ALL ) == 0 ) && ( ntohs( flow_stats->priority ) < USHRT_MAX ) ) {
       return ERROR_INVALID_FLOW_PRIORITY;
     }
 
@@ -1058,7 +1058,7 @@ validate_table_stats_reply( const buffer *message ) {
 
   ret = validate_header( message, OFPT_STATS_REPLY,
                          offsetof( struct ofp_stats_reply, body ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -1113,7 +1113,7 @@ validate_port_stats_reply( const buffer *message ) {
 
   ret = validate_header( message, OFPT_STATS_REPLY,
                          offsetof( struct ofp_stats_reply, body ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -1174,7 +1174,7 @@ validate_queue_stats_reply( const buffer *message ) {
 
   ret = validate_header( message, OFPT_STATS_REPLY,
                          offsetof( struct ofp_stats_reply, body ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -1224,7 +1224,7 @@ validate_vendor_stats_reply( const buffer *message ) {
 
   ret = validate_header( message, OFPT_STATS_REPLY,
                          offsetof( struct ofp_stats_reply, body ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -1436,7 +1436,7 @@ validate_queue_get_config_reply( const buffer *message ) {
 
   ret = validate_header( message, OFPT_QUEUE_GET_CONFIG_REPLY,
                          sizeof( struct ofp_queue_get_config_reply ) + sizeof( struct ofp_packet_queue ),
-                         UINT16_MAX );
+                         USHRT_MAX );
   if ( ret < 0 ) {
     return ret;
   }
@@ -1925,8 +1925,14 @@ valid_openflow_message( const buffer *message ) {
   return true;
 }
 
-
-static struct error_map error_maps[] = {
+static struct error_map {
+  uint8_t type; // One of the OFPT_ constants.
+  struct map {
+    int error_no; // Internal error number.
+    uint16_t error_type; // OpenFlow error type.
+    uint16_t error_code; // OpenFlow error code.
+  } maps[ 64 ];
+} error_maps[] = {
   {
     OFPT_HELLO,
     {

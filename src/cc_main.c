@@ -1,9 +1,27 @@
-#include <stdio.h>
-#include "cc_log.h"
-#include "cc_pares.h"
-#include "cc_init_of.h"
+/*
+ * cc_of_msg_action functions.
+ *
+ * Author: qiang wang <wqlxx@yahoo.com.cn>
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2, as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 
-	/*void usage(const char* program_name)
+
+#include "cc_main.h"
+
+void usage(const char* program_name)
 {
     printf("%s: nox runtime\n"
 	   "usage: %s [OPTIONS] [APP[=ARG[,ARG]...]] [APP[=ARG[,ARG]...]]...\n"
@@ -36,36 +54,59 @@
 	   "  -h, --help              display this help message\n"
 	   "  -V, --version           display version information\n");
     exit(EXIT_SUCCESS);
-}*/
-
-	/*
-	
-	*/
+}
 
 //struct cc_switch_proc cc_switch_proc={.num_sw=0};
 static cc_socket* listen_socket;
-static list_element* sw_info_table;
+//static list_element* sw_info_table;
+
+/*
+struct sw_info_app {
+	pid_t sw_pid;
+	uint64_t dpid; 
+};
+typedef struct sw_info_app sw_info_app;
+*/
+
+static int
+cc_search_sw_info_table(pid_t pid);
+{
+	printf("switch exit!");
+	return 0;
+}
+
+
+static void
+sig_child(int signo)
+{
+	pid_t pid;
+	int* status;
+	pid = waitpid(-1,status,WNOHANG);
+	cc_search_sw_info_table(pid);
+}
+
 
 int main(int argc,char **argv)
 {
 
-	parse_argv(argc,argv);
+	//parse_argv(argc,argv);
 	signal(SIGPIPE, SIG_IGN);
+	/*handle the signal caused by child's exit*/
+	signal(SIGCHLD, sig_child);
 	//cc_init_of(&listen_socket);
 
-	cc_init_sw_info_table(sw_info_table);
-
-	cc_init_of_socket(listen_socket);
+	//cc_init_sw_info_table(sw_info_table);
 
 	//cc_init_app();
 
 	cc_init_of_socket(listen_socket);
 
-	cc_polling(sw_info_table, listen_socket);
+	cc_polling(sw_info_table,listen_socket);
 
-	cc_finalize_of(sw_info_table,listen_socket);
+	cc_finalize_of_socket(listen_socket->fd);
 
-	cc_finalize_sw_info_table(sw_info_table);
+
+	//cc_finalize_sw_info_table(sw_info_table);
 
 	return 0;
 }

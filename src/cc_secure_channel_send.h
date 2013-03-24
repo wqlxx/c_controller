@@ -22,6 +22,18 @@
 #define CC_SECURE_CHANNEL_SEND_H 1
 
 #include "cc_basic.h"
+#include "cc_of_msg_send.h"
+#include "queue.h"
+#include "cc_buffer.h"
 
 typedef int (*FUNC_CB_S)(sw_info* , buffer*);
+
+FUNC_CB_S  cc_select_send_func(uint16_t type);
+
+static int cc_send_to_secure_channel(sw_info* cc_sw_info,buffer* buf);
+
+static int cc_send_to_secure_channel_app(sw_info* cc_sw_info,buffer* buf);
+
+static int cc_flush_to_secure_channel(sw_info* cc_sw_info);
+
 #endif

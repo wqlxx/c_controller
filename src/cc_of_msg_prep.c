@@ -19,366 +19,6 @@
 
 #include "cc_of_msg_prep.h"
 
-size_t
-of_make_action_output(char **pbuf, size_t bufroom, uint16_t oport)
-{
-    struct ofp_action_output *op_act;
-
-    if (!(*pbuf)) {
-        *pbuf = (void *)calloc(1, sizeof(*op_act));
-        bufroom = sizeof(*op_act);
-        assert(*pbuf);
-    }
-
-    assert(sizeof(*op_act) <= bufroom);
-    
-    op_act = (void *)(*pbuf);
-
-    op_act->type = htons(OFPAT_OUTPUT);
-    op_act->len  = htons(sizeof(*op_act));
-    op_act->port = htons(oport);
-
-    return (sizeof(*op_act));
-}
-
-size_t
-of_make_action_set_vid(char **pbuf, size_t bufroom, uint16_t vid)
-{
-    struct ofp_action_vlan_vid *vid_act;
-
-    if (!(*pbuf)) {
-        *pbuf = (void *)calloc(1, sizeof(*vid_act));
-        bufroom = sizeof(*vid_act);
-        assert(*pbuf);
-    }
-
-    assert(sizeof(*vid_act) <= bufroom);
-    
-    vid_act = (void *)(*pbuf);
-
-    vid_act->type = htons(OFPAT_SET_VLAN_VID);
-    vid_act->len  = htons(sizeof(*vid_act));
-    vid_act->vlan_vid = htons(vid);
-
-    return (sizeof(*vid_act));
-}
-
-size_t
-of_make_action_set_dmac(char **pbuf, size_t bufroom, uint8_t *dmac)
-{
-    struct ofp_action_dl_addr *dmac_act;
-
-    if (!(*pbuf)) {
-        *pbuf = (void *)calloc(1, sizeof(*dmac_act));
-        bufroom = sizeof(*dmac_act);
-        assert(*pbuf);
-    }
-
-    assert(sizeof(*dmac_act) <= bufroom);
-    
-    dmac_act = (void *)(*pbuf);
-
-    dmac_act->type = htons(OFPAT_SET_DL_DST);
-    dmac_act->len  = htons(sizeof(*dmac_act));
-    memcpy(dmac_act->dl_addr, dmac, OFP_ETH_ALEN);
-
-    return (sizeof(*dmac_act));
-}
-
-char *
-of_dump_wildcards(uint32_t wildcards)
-{
-    uint32_t                 nw_dst_mask, nw_src_mask;   
-    char                     *pbuf;
-    size_t                   len = 0;
-    uint32_t                 ip_wc;
-#define OF_DUMP_WC_SZ 4096 
-    pbuf = calloc(1, OF_DUMP_WC_SZ);
-    assert(pbuf);
-
-    wildcards = ntohl(wildcards);
-
-    ip_wc = ((wildcards & OFPFW_NW_DST_MASK) >> OFPFW_NW_DST_SHIFT);
-    nw_dst_mask = ip_wc >= 32 ? 0 : 
-                           make_inet_mask(32-ip_wc); 
-
-    ip_wc = ((wildcards & OFPFW_NW_SRC_MASK) >> OFPFW_NW_SRC_SHIFT);
-    nw_src_mask = ip_wc >= 32 ? 0 : 
-                           make_inet_mask(32-ip_wc);
-    
-    /* Reduce this to a line please.... */
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "Wildcards:\r\n");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "smac", (wildcards & OFPFW_DL_SRC) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "dmac", (wildcards & OFPFW_DL_DST) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "eth-type", (wildcards & OFPFW_DL_TYPE) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "vlan-id", (wildcards & OFPFW_DL_VLAN) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "vlan-pcp", (wildcards & OFPFW_DL_VLAN_PCP) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: 0x%08x\r\n",
-                    "dst-ip-mask", nw_dst_mask);
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: 0x%08x\r\n",
-                    "src-ip-mask", nw_src_mask);
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "ip-proto", (wildcards & OFPFW_NW_PROTO) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "src-port", (wildcards & OFPFW_TP_SRC) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "dst-port", (wildcards & OFPFW_TP_DST) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-    len += snprintf(pbuf+len, OF_DUMP_WC_SZ-len-1, "%-10s: %s\r\n",
-                    "in-port", (wildcards & OFPFW_IN_PORT) ? "*" : "exact");
-    assert(len < OF_DUMP_WC_SZ-1);
-
-    return pbuf;
-}
-
-
-char *
-of_dump_actions(void *actions, size_t action_len)
-{
-    char                     *pbuf;
-    size_t                   len = 0, parsed_len = 0;
-    uint16_t                 act_type;
-    struct ofp_action_header *hdr;
-#define OF_DUMP_ACT_SZ 4096 
-    pbuf = calloc(1, OF_DUMP_ACT_SZ);
-    assert(pbuf);
-
-    len += snprintf(pbuf+len, OF_DUMP_ACT_SZ-len-1, "Actions: ");
-    assert(len < OF_DUMP_ACT_SZ-1); 
-
-    if (!action_len) {
-        len += snprintf(pbuf+len, OF_DUMP_ACT_SZ-len-1, "None (Drop)");
-        assert(len < OF_DUMP_ACT_SZ-1);
-        return pbuf;
-    }
-
-    while (action_len) {
-        hdr =  (struct ofp_action_header *)actions;
-        act_type = ntohs(hdr->type);
-        switch (act_type) {
-        case OFPAT_OUTPUT:
-            {
-                struct ofp_action_output *op_act = (void *)hdr;
-                len += snprintf(pbuf+len, OF_DUMP_ACT_SZ-len-1, 
-                                "%s-Port 0x%x ", 
-                                "output", ntohs(op_act->port));    
-                assert(len < OF_DUMP_ACT_SZ-1);
-                parsed_len = sizeof(*op_act);
-                break;
-            }
-        case OFPAT_SET_VLAN_VID:
-            {
-                struct ofp_action_vlan_vid *vid_act = (void *)hdr;    
-                len += snprintf(pbuf+len, OF_DUMP_ACT_SZ-len-1,
-                                "%s-vid 0x%04x ",
-                                "set-vid", ntohs(vid_act->vlan_vid));
-                assert(len < OF_DUMP_ACT_SZ-1);
-                parsed_len = sizeof(*vid_act);
-                break;
-                                 
-            } 
-        case OFPAT_SET_DL_DST:
-            {
-                struct ofp_action_dl_addr *dmac_act = (void *)hdr;
-                len += snprintf(pbuf+len, OF_DUMP_ACT_SZ-len-1,
-                                "%s-%02x:%02x:%02x:%02x:%02x:%02x ",
-                                "set-dmac", dmac_act->dl_addr[0], dmac_act->dl_addr[1], 
-                                dmac_act->dl_addr[2], dmac_act->dl_addr[3], 
-                                dmac_act->dl_addr[4], dmac_act->dl_addr[5]);
-                assert(len < OF_DUMP_ACT_SZ-1);
-                parsed_len = sizeof(*dmac_act);
-                break;
-            }
-        default:
-            {
-                c_log_err("%s:unhandled action %u", FN, act_type);
-                free(pbuf);
-                return NULL;
-            }
-        }
-
-        action_len -= parsed_len;
-        actions = ((uint8_t *)actions + parsed_len);
-    }
-
-    return pbuf;
-}
-
-int
-of_validate_actions(void *actions, size_t action_len)
-{
-    size_t                   parsed_len = 0;
-    uint16_t                 act_type;
-    struct ofp_action_header *hdr;
-
-    while (action_len) {
-        hdr =  (struct ofp_action_header *)actions;
-        act_type = ntohs(hdr->type);
-        switch (act_type) {
-        case OFPAT_OUTPUT:
-            {
-                struct ofp_action_output *op_act UNUSED = (void *)hdr;
-                parsed_len = sizeof(*op_act);
-                break;
-            }
-        case OFPAT_SET_VLAN_VID:
-            {
-                struct ofp_action_vlan_vid *vid_act UNUSED = (void *)hdr;    
-                parsed_len = sizeof(*vid_act);
-                break;
-                                 
-            } 
-        case OFPAT_SET_DL_DST:
-            {
-                struct ofp_action_dl_addr *dmac_act UNUSED = (void *)hdr;
-                parsed_len = sizeof(*dmac_act);
-                break;
-            }
-        default:
-            {
-                c_log_err("%s:unhandled action %u", FN, act_type);
-                return -1;
-            }
-        }
-
-        action_len -= parsed_len;
-        actions = ((uint8_t *)actions + parsed_len);
-    }
-
-    return 0;
-}
-
-
-void * __fastpath
-of_prep_msg(size_t len, uint8_t type, uint32_t xid)
-{
-    struct cbuf *b;
-    struct ofp_header *h;
-
-    b = alloc_cbuf(len);
-    h = cbuf_put(b, len);
-
-    h->version = OFP_VERSION;
-    h->type = type;
-    h->length = htons(len);
-
-    if (xid) {
-        h->xid = xid;
-    } else {
-        h->xid = of_alloc_xid();
-    }
-
-    memset(h + 1, 0, len - sizeof(*h));
-
-    return b;
-}
-
-struct cbuf * __fastpath
-of_prep_flow_mod(uint16_t command, const struct flow *flow, 
-                 size_t actions_len, uint32_t wildcards)
-{
-    struct ofp_flow_mod *ofm;
-    size_t len = sizeof *ofm + actions_len;
-    struct cbuf *b;
-
-    b = alloc_cbuf(len);
-    ofm = cbuf_put(b, len);
-
-    memset(ofm, 0, len);
-    ofm->header.version = OFP_VERSION;
-    ofm->header.type = OFPT_FLOW_MOD;
-    ofm->header.length = htons(len);
-    ofm->match.wildcards = wildcards;
-    ofm->match.in_port = flow->in_port;
-    memcpy(ofm->match.dl_src, flow->dl_src, sizeof ofm->match.dl_src);
-    memcpy(ofm->match.dl_dst, flow->dl_dst, sizeof ofm->match.dl_dst);
-    ofm->match.dl_vlan = flow->dl_vlan;
-    ofm->match.dl_type = flow->dl_type;
-    ofm->match.dl_vlan_pcp = flow->dl_vlan_pcp;
-    ofm->match.nw_src = flow->nw_src;
-    ofm->match.nw_dst = flow->nw_dst;
-    ofm->match.nw_proto = flow->nw_proto;
-    ofm->match.tp_src = flow->tp_src;
-    ofm->match.tp_dst = flow->tp_dst;
-    ofm->command = htons(command);
-
-    return b;
-}
-
-struct cbuf * __fastpath
-of_prep_flow_add_msg(const struct flow *flow, uint32_t buffer_id,
-                     void *actions, size_t actions_len, 
-                     uint16_t i_timeo, uint16_t h_timeo, 
-                     uint32_t wildcards, uint16_t prio)
-{
-    struct cbuf *b = of_prep_flow_mod(OFPFC_MODIFY_STRICT, flow, actions_len, wildcards);
-    struct ofp_flow_mod *ofm = (void *)(b->data);
-    struct ofp_action_header *ofp_actions;
-
-    ofm->idle_timeout = htons(i_timeo);
-    ofm->hard_timeout = htons(h_timeo);
-    ofm->priority = htons(prio);
-    ofm->buffer_id = htonl(buffer_id);
-    ofp_actions = (void *)(ofm + 1);
-    memcpy(ofp_actions, actions, actions_len);
-
-    return b;
-}
-
-struct cbuf *
-of_prep_flow_del_msg(const struct flow *flow, uint32_t wildcards, 
-                     uint16_t oport, bool strict)
-{
-    struct cbuf *b = of_prep_flow_mod(strict ? OFPFC_DELETE_STRICT:OFPFC_DELETE, flow, 
-                                      0, wildcards);
-    struct ofp_flow_mod *ofm = (void *)(b->data);
-
-    ofm->out_port = htons(oport?:OFPP_NONE);
-    return b;
-}
-
-void * __fastpath
-of_prep_pkt_out_msg(struct of_pkt_out_params *parms)
-{
-    uint8_t               tot_len;
-    struct ofp_packet_out *out;
-    struct cbuf           *b;
-    void                  *data;
-
-    tot_len = sizeof(struct ofp_packet_out) + parms->action_len
-                + parms->data_len;
-
-    b = of_prep_msg(tot_len, OFPT_PACKET_OUT, (unsigned long)parms->data);
-
-    out = (void *)b->data;
-    out->buffer_id = htonl(parms->buffer_id);
-    out->in_port   = htons(parms->in_port);
-    out->actions_len = htons(parms->action_len);
-
-    data = (uint8_t *)out->actions + parms->action_len;
-    /* Hate it !! */
-    memcpy(out->actions, parms->action_list, parms->action_len);
-    memcpy(data, parms->data, parms->data_len);
-
-    return b;
-}
-
-
 static buffer *
 cc_create_header( const uint32_t xid, const uint8_t type, const uint16_t length ) {
 
@@ -499,12 +139,12 @@ cc_create_vendor( const uint32_t transaction_id, const uint32_t vendor, const bu
     data_length = ( uint16_t ) data->length;
   }
 
-  debug( "Creating a vendor ( xid = %#x, vendor = %#x, data length = %u ).",
-         transaction_id, vendor, data_length );
+  //debug( "Creating a vendor ( xid = %#x, vendor = %#x, data length = %u ).",
+    //     transaction_id, vendor, data_length );
 
   length =  ( uint16_t ) ( sizeof( struct ofp_vendor_header ) + data_length );
   buffer = cc_create_header( transaction_id, OFPT_VENDOR, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   vendor_header = ( struct ofp_vendor_header * ) buffer->data;
   vendor_header->vendor = htonl( vendor );
@@ -520,7 +160,7 @@ cc_create_vendor( const uint32_t transaction_id, const uint32_t vendor, const bu
 
 buffer *
 cc_create_features_request( const uint32_t transaction_id ) {
-  debug( "Creating a features request ( xid = %#x ).", transaction_id );
+  //debug( "Creating a features request ( xid = %#x ).", transaction_id );
 
   return cc_create_header( transaction_id, OFPT_FEATURES_REQUEST, sizeof( struct ofp_header ) );
 }
@@ -540,12 +180,12 @@ cc_create_features_reply( const uint32_t transaction_id, const uint64_t datapath
   struct ofp_phy_port pn;
   list_element *p = NULL, *port;
 
-  debug( "Creating a features reply "
-         "( xid = %#x, datapath_id = %#" PRIx64 ", n_buffers = %u, n_tables = %u, capabilities = %#x, actions = %#x ).",
-         transaction_id, datapath_id, n_buffers, n_tables, capabilities, actions );
+  //debug( "Creating a features reply "
+    //     "( xid = %#x, datapath_id = %#" PRIx64 ", n_buffers = %u, n_tables = %u, capabilities = %#x, actions = %#x ).",
+      //   transaction_id, datapath_id, n_buffers, n_tables, capabilities, actions );
 
   if ( ports != NULL ) {
-    p = ( list_element * ) xmalloc( sizeof( list_element ) );
+    p = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( p, ports, sizeof( list_element ) );
 
     port = p;
@@ -555,12 +195,12 @@ cc_create_features_reply( const uint32_t transaction_id, const uint64_t datapath
     }
   }
 
-  debug( "# of ports = %u.", n_ports );
+  //debug( "# of ports = %u.", n_ports );
 
   buffer = cc_create_header( transaction_id, OFPT_FEATURES_REPLY,
                           ( uint16_t ) ( offsetof( struct ofp_switch_features, ports )
                                          + sizeof( struct ofp_phy_port ) * n_ports ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   switch_features = ( struct ofp_switch_features * ) buffer->data;
   switch_features->datapath_id = htonll( datapath_id );
@@ -576,14 +216,14 @@ cc_create_features_reply( const uint32_t transaction_id, const uint64_t datapath
     port = p;
     while ( port != NULL ) {
       phy_port_to_string( port->data, port_str, sizeof( port_str ) );
-      debug( "[%u] %s", count++, port_str );
+      //debug( "[%u] %s", count++, port_str );
       hton_phy_port( &pn, ( struct ofp_phy_port * ) port->data );
       memcpy( phy_port, &pn, sizeof( struct ofp_phy_port ) );
       port = port->next;
       phy_port++;
     }
 
-    xfree( p );
+    free( p );
   }
 
   return buffer;
@@ -592,7 +232,7 @@ cc_create_features_reply( const uint32_t transaction_id, const uint64_t datapath
 
 buffer *
 cc_create_get_config_request( const uint32_t transaction_id ) {
-  debug( "Creating a get config request ( xid = %#x ).", transaction_id );
+  //debug( "Creating a get config request ( xid = %#x ).", transaction_id );
 
   return cc_create_header( transaction_id, OFPT_GET_CONFIG_REQUEST, sizeof( struct ofp_header ) );
 }
@@ -604,11 +244,11 @@ cc_create_get_config_reply( const uint32_t transaction_id, const uint16_t flags,
   buffer *buffer;
   struct ofp_switch_config *switch_config;
 
-  debug( "Creating a get config reply ( xid = %#x, flags = %#x, miss_send_len = %u ).",
-         transaction_id, flags, miss_send_len );
+  //debug( "Creating a get config reply ( xid = %#x, flags = %#x, miss_send_len = %u ).",
+    //     transaction_id, flags, miss_send_len );
 
   buffer = cc_create_header( transaction_id, OFPT_GET_CONFIG_REPLY, sizeof( struct ofp_switch_config ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   switch_config = ( struct ofp_switch_config * ) buffer->data;
   switch_config->flags = htons( flags );
@@ -620,11 +260,11 @@ cc_create_get_config_reply( const uint32_t transaction_id, const uint16_t flags,
 
 buffer *
 cc_create_set_config( const uint32_t transaction_id, const uint16_t flags, uint16_t miss_send_len ) {
-  debug( "Creating a set config ( xid = %#x, flags = %#x, miss_send_len = %u ).",
-         transaction_id, flags, miss_send_len );
+  //debug( "Creating a set config ( xid = %#x, flags = %#x, miss_send_len = %u ).",
+        // transaction_id, flags, miss_send_len );
 
   buffer *set_config = cc_create_header( transaction_id, OFPT_SET_CONFIG, sizeof( struct ofp_switch_config ) );
-  assert( set_config != NULL );
+  //assert( set_config != NULL );
 
   struct ofp_switch_config *switch_config = ( struct ofp_switch_config * ) set_config->data;
   switch_config->flags = htons( flags );
@@ -644,15 +284,15 @@ cc_create_packet_in( const uint32_t transaction_id, const uint32_t buffer_id, co
     data_length = ( uint16_t ) data->length;
   }
 
-  debug( "Creating a packet-in "
-         "( xid = %#x, buffer_id = %#x, total_len = %u, "
-         "in_port = %u, reason = %#x, data length = %u ).",
-         transaction_id, buffer_id, total_len,
-         in_port, reason, data_length );
+  //debug( "Creating a packet-in "
+        // "( xid = %#x, buffer_id = %#x, total_len = %u, "
+        // "in_port = %u, reason = %#x, data length = %u ).",
+        // transaction_id, buffer_id, total_len,
+        // in_port, reason, data_length );
 
   buffer = cc_create_header( transaction_id, OFPT_PACKET_IN,
                           ( uint16_t ) ( offsetof( struct ofp_packet_in, data ) + data_length ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   packet_in = ( struct ofp_packet_in * ) buffer->data;
   packet_in->buffer_id = htonl( buffer_id );
@@ -680,10 +320,12 @@ cc_create_flow_removed( const uint32_t transaction_id, const struct ofp_match ma
   struct ofp_match m = match;
   struct ofp_flow_removed *flow_removed;
 
+  
+  /*
   // Because match_to_string() is costly, we check logging_level first.
   if ( get_logging_level() >= LOG_DEBUG ) {
     match_to_string( &m, match_str, sizeof( match_str ) );
-    debug( "Creating a flow removed "
+    //debug( "Creating a flow removed "
            "( xid = %#x, match = [%s], cookie = %#" PRIx64 ", priority = %u, "
            "reason = %#x, duration_sec = %u, duration_nsec = %u, "
            "idle_timeout = %u, packet_count = %" PRIu64 ", byte_count = %" PRIu64 " ).",
@@ -691,9 +333,10 @@ cc_create_flow_removed( const uint32_t transaction_id, const struct ofp_match ma
            reason, duration_sec, duration_nsec,
            idle_timeout, packet_count, byte_count );
   }
+  */
 
   buffer = cc_create_header( transaction_id, OFPT_FLOW_REMOVED, sizeof( struct ofp_flow_removed ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   flow_removed = ( struct ofp_flow_removed * ) buffer->data;
   hton_match( &flow_removed->match, &m );
@@ -721,11 +364,11 @@ cc_create_port_status( const uint32_t transaction_id, const uint8_t reason,
   struct ofp_port_status *port_status;
 
   phy_port_to_string( &d, desc_str, sizeof( desc_str ) );
-  debug( "Creating a port status ( xid = %#x, reason = %#x, desc = [%s] ).",
-         transaction_id, reason, desc_str );
+  //debug( "Creating a port status ( xid = %#x, reason = %#x, desc = [%s] ).",
+        // transaction_id, reason, desc_str );
 
   buffer = cc_create_header( transaction_id, OFPT_PORT_STATUS, sizeof( struct ofp_port_status ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   port_status = ( struct ofp_port_status * ) buffer->data;
   port_status->reason = reason;
@@ -747,32 +390,36 @@ cc_create_packet_out( const uint32_t transaction_id, const uint32_t buffer_id, c
   buffer *buffer;
   struct ofp_packet_out *packet_out;
   struct ofp_action_header *action_header;
-  link_element *action;
+  list_element *action;
 
   if ( ( data != NULL ) && ( data->length > 0 ) ) {
     data_length = ( uint16_t ) data->length;
   }
 
-  debug( "Creating a packet-out ( xid = %#x, buffer_id = %#x, in_port = %u, data length = %u ).",
-         transaction_id, buffer_id, in_port, data_length );
+  //debug( "Creating a packet-out ( xid = %#x, buffer_id = %#x, in_port = %u, data length = %u ).",
+        // transaction_id, buffer_id, in_port, data_length );
 
-  if ( buffer_id == UINT32_MAX ) {
+  if ( buffer_id == UINT_MAX ) {
     if ( data == NULL ) {
-      die( "An Ethernet frame must be provided if buffer_id is equal to %#x", UINT32_MAX );
-    }
+      //die( "An Ethernet frame must be provided if buffer_id is equal to %#x", UINT_MAX );
+      log_err_for_cc("An Ethernet frame must be provided if buffer_id is equal to UINT_MAX");
+	  return CC_ERROR;
+	}
     if ( data->length + ETH_FCS_LENGTH < ETH_MINIMUM_LENGTH ) {
-      die( "The length of the provided Ethernet frame is shorter than the minimum length of an Ethernet frame (= %d bytes).", ETH_MINIMUM_LENGTH );
-    }
+      //die( "The length of the provided Ethernet frame is shorter than the minimum length of an Ethernet frame (= %d bytes).", ETH_MINIMUM_LENGTH );
+      log_err_for_cc("The length of the provided Ethernet frame is shorter than the minimum length of an Ethernet frame");
+	  return CC_ERROR;
+	}
   }
 
   if ( actions != NULL ) {
-    debug( "# of actions = %d.", actions->n_actions );
+    //debug( "# of actions = %d.", actions->n_actions );
     actions_length = get_actions_length( actions );
   }
 
   length = ( uint16_t ) ( offsetof( struct ofp_packet_out, actions ) + actions_length + data_length );
   buffer = cc_create_header( transaction_id, OFPT_PACKET_OUT, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   packet_out = ( struct ofp_packet_out * ) buffer->data;
   packet_out->buffer_id = htonl( buffer_id );
@@ -782,7 +429,7 @@ cc_create_packet_out( const uint32_t transaction_id, const uint32_t buffer_id, c
   if ( actions_length > 0 ) {
     a = ( void * ) ( ( char * ) buffer->data + offsetof( struct ofp_packet_out, actions ) );
 
-    action = actions->link;
+    action = actions->list;
     while ( action != NULL ) {
       action_header = ( struct ofp_action_header * ) action->data;
       action_length = action_header->len;
@@ -820,10 +467,11 @@ cc_create_flow_mod( const uint32_t transaction_id, const struct ofp_match match,
   struct ofp_action_header *action_header;
   list_element *action;
 
+  /*
   // Because match_to_string() is costly, we check logging_level first.
   if ( get_logging_level() >= LOG_DEBUG ) {
     match_to_string( &m, match_str, sizeof( match_str ) );
-    debug( "Creating a flow modification "
+    //debug( "Creating a flow modification "
            "( xid = %#x, match = [%s], cookie = %#" PRIx64 ", command = %#x, "
            "idle_timeout = %u, hard_timeout = %u, priority = %u, "
            "buffer_id = %#x, out_port = %u, flags = %#x ).",
@@ -831,15 +479,16 @@ cc_create_flow_mod( const uint32_t transaction_id, const struct ofp_match match,
            idle_timeout, hard_timeout, priority,
            buffer_id, out_port, flags );
   }
+  */
 
   if ( actions != NULL ) {
-    debug( "# of actions = %d.", actions->n_actions );
+    //debug( "# of actions = %d.", actions->n_actions );
     actions_length = get_actions_length( actions );
   }
 
   length = ( uint16_t ) ( offsetof( struct ofp_flow_mod, actions ) + actions_length );
   buffer = cc_create_header( transaction_id, OFPT_FLOW_MOD, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   flow_mod = ( struct ofp_flow_mod * ) buffer->data;
   hton_match( &flow_mod->match, &m );
@@ -876,15 +525,13 @@ cc_create_port_mod( const uint32_t transaction_id, const uint16_t port_no,
   buffer *buffer;
   struct ofp_port_mod *port_mod;
 
-  debug( "Creating a port modification "
-         "( xid = %#x, port_no = %u, hw_addr = %02x:%02x:%02x:%02x:%02x:%02x, "
-         "config = %#x, mask = %#x, advertise = %#x ).",
+
          transaction_id, port_no,
          hw_addr[ 0 ], hw_addr[ 1 ], hw_addr[ 2 ], hw_addr[ 3 ], hw_addr[ 4 ], hw_addr[ 5 ],
          config, mask, advertise );
 
   buffer = cc_create_header( transaction_id, OFPT_PORT_MOD, sizeof( struct ofp_port_mod ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   port_mod = ( struct ofp_port_mod * ) buffer->data;
   port_mod->port_no = htons( port_no );
@@ -904,11 +551,11 @@ cc_create_stats_request( const uint32_t transaction_id, const uint16_t type,
   buffer *buffer;
   struct ofp_stats_request *stats_request;
 
-  debug( "Creating a stats request ( xid = %#x, type = %#x, length = %u, flags = %#x ).",
-         transaction_id, type, length, flags );
+  //debug( "Creating a stats request ( xid = %#x, type = %#x, length = %u, flags = %#x ).",
+         //transaction_id, type, length, flags );
 
   buffer = cc_create_header( transaction_id, OFPT_STATS_REQUEST, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_request = ( struct ofp_stats_request * ) buffer->data;
   stats_request->type = htons( type );
@@ -920,8 +567,8 @@ cc_create_stats_request( const uint32_t transaction_id, const uint16_t type,
 
 buffer *
 cc_create_desc_stats_request( const uint32_t transaction_id, const uint16_t flags ) {
-  debug( "Creating a description stats request ( xid = %#x, flags = %#x ).",
-         transaction_id, flags );
+  //debug( "Creating a description stats request ( xid = %#x, flags = %#x ).",
+         //transaction_id, flags );
 
   return cc_create_stats_request( transaction_id, OFPST_DESC,
                                sizeof( struct ofp_stats_request ), flags );
@@ -938,17 +585,19 @@ cc_create_flow_stats_request( const uint32_t transaction_id, const uint16_t flag
   struct ofp_match m = match;
   struct ofp_flow_stats_request *flow_stats_request;
 
+  /*
   // Because match_to_string() is costly, we check logging_level first.
   if ( get_logging_level() >= LOG_DEBUG ) {
     match_to_string( &m, match_str, sizeof( match_str ) );
-    debug( "Creating a flow stats request ( xid = %#x, flags = %#x, match = [%s], table_id = %u, out_port = %u ).",
+    //debug( "Creating a flow stats request ( xid = %#x, flags = %#x, match = [%s], table_id = %u, out_port = %u ).",
            transaction_id, flags, match_str, table_id, out_port );
   }
+  */
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_request, body )
                          + sizeof( struct ofp_flow_stats_request ) );
   buffer = cc_create_stats_request( transaction_id, OFPST_FLOW, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   flow_stats_request = ( struct ofp_flow_stats_request * ) ( ( char * ) buffer->data
                        + offsetof( struct ofp_stats_request, body ) );
@@ -971,17 +620,19 @@ cc_create_aggregate_stats_request( const uint32_t transaction_id,
   struct ofp_match m = match;
   struct ofp_aggregate_stats_request *aggregate_stats_request;
 
+  /*
   // Because match_to_string() is costly, we check logging_level first.
   if ( get_logging_level() >= LOG_DEBUG ) {
     match_to_string( &m, match_str, sizeof( match_str ) );
-    debug( "Creating an aggregate stats request ( xid = %#x, flags = %#x, match = [%s], table_id = %u, out_port = %u ).",
+    //debug( "Creating an aggregate stats request ( xid = %#x, flags = %#x, match = [%s], table_id = %u, out_port = %u ).",
            transaction_id, flags, match_str, table_id, out_port );
   }
+  */
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_request, body )
            + sizeof( struct ofp_aggregate_stats_request ) );
   buffer = cc_create_stats_request( transaction_id, OFPST_AGGREGATE, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   aggregate_stats_request = ( struct ofp_aggregate_stats_request * ) ( ( char * ) buffer->data
                             + offsetof( struct ofp_stats_request, body ) );
@@ -996,7 +647,7 @@ cc_create_aggregate_stats_request( const uint32_t transaction_id,
 
 buffer *
 cc_create_table_stats_request( const uint32_t transaction_id, const uint16_t flags ) {
-  debug( "Creating a table stats request ( xid = %#x, flags = %#x ).", transaction_id, flags );
+  //debug( "Creating a table stats request ( xid = %#x, flags = %#x ).", transaction_id, flags );
 
   return cc_create_stats_request( transaction_id, OFPST_TABLE,
                                sizeof( struct ofp_stats_request ), flags );
@@ -1010,13 +661,13 @@ cc_create_port_stats_request( const uint32_t transaction_id, const uint16_t flag
   buffer *buffer;
   struct ofp_port_stats_request *port_stats_request;
 
-  debug( "Creating a port stats request ( xid = %#x, flags = %#x, port_no = %u ).",
-         transaction_id, flags, port_no );
+  //debug( "Creating a port stats request ( xid = %#x, flags = %#x, port_no = %u ).",
+        // transaction_id, flags, port_no );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_request, body )
            + sizeof( struct ofp_port_stats_request ) );
   buffer = cc_create_stats_request( transaction_id, OFPST_PORT, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   port_stats_request = ( struct ofp_port_stats_request * ) ( ( char * ) buffer->data
                        + offsetof( struct ofp_stats_request, body ) );
@@ -1034,13 +685,13 @@ cc_create_queue_stats_request( const uint32_t transaction_id, const uint16_t fla
   buffer *buffer;
   struct ofp_queue_stats_request *queue_stats_request;
 
-  debug( "Creating a queue stats request ( xid = %#x, flags = %#x, port_no = %u, queue_id = %u ).",
-         transaction_id, flags, port_no, queue_id );
+  //debug( "Creating a queue stats request ( xid = %#x, flags = %#x, port_no = %u, queue_id = %u ).",
+         //transaction_id, flags, port_no, queue_id );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_request, body )
                         + sizeof( struct ofp_queue_stats_request ) );
   buffer = cc_create_stats_request( transaction_id, OFPST_QUEUE, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   queue_stats_request = ( struct ofp_queue_stats_request * ) ( ( char * ) buffer->data
                         + offsetof( struct ofp_stats_request, body ) );
@@ -1065,13 +716,13 @@ cc_create_vendor_stats_request( const uint32_t transaction_id, const uint16_t fl
     data_length = ( uint16_t ) body->length;
   }
 
-  debug( "Creating a vendor stats request ( xid = %#x, flags = %#x, vendor = %#x, data length = %u ).",
-         transaction_id, flags, vendor, data_length );
+  //debug( "Creating a vendor stats request ( xid = %#x, flags = %#x, vendor = %#x, data length = %u ).",
+         //transaction_id, flags, vendor, data_length );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_request, body ) + sizeof( uint32_t )
                         + data_length );
   buffer = cc_create_stats_request( transaction_id, OFPST_VENDOR, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   v = ( uint32_t * ) ( ( char * ) buffer->data + offsetof( struct ofp_stats_request, body ) );
   *v = htonl( vendor );
@@ -1093,11 +744,11 @@ cc_create_stats_reply( const uint32_t transaction_id, const uint16_t type,
   buffer *buffer;
   struct ofp_stats_reply *stats_reply;
 
-  debug( "Creating a stats reply ( xid = %#x, type = %#x, length = %u, flags = %#x ).",
-         transaction_id, type, length, flags );
+  //debug( "Creating a stats reply ( xid = %#x, type = %#x, length = %u, flags = %#x ).",
+         //transaction_id, type, length, flags );
 
   buffer = cc_create_header( transaction_id, OFPT_STATS_REPLY, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   stats_reply->type = htons( type );
@@ -1119,14 +770,14 @@ cc_create_desc_stats_reply( const uint32_t transaction_id, const uint16_t flags,
   struct ofp_stats_reply *stats_reply;
   struct ofp_desc_stats *desc_stats;
 
-  debug( "Creating a description stats reply "
-         "( xid = %#x, flags = %#x, mfr_desc = %s, hw_desc = %s, sw_desc = %s, serial_num = %s, dp_desc = %s ).",
-         transaction_id, flags, mfr_desc, hw_desc, sw_desc, serial_num, dp_desc );
+  //debug( "Creating a description stats reply "
+        // "( xid = %#x, flags = %#x, mfr_desc = %s, hw_desc = %s, sw_desc = %s, serial_num = %s, dp_desc = %s ).",
+        // transaction_id, flags, mfr_desc, hw_desc, sw_desc, serial_num, dp_desc );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                         + sizeof( struct ofp_desc_stats ) );
   buffer = cc_create_stats_reply( transaction_id, OFPST_DESC, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   desc_stats = ( struct ofp_desc_stats * ) stats_reply->body;
@@ -1151,10 +802,10 @@ cc_create_flow_stats_reply( const uint32_t transaction_id, const uint16_t flags,
   struct ofp_stats_reply *stats_reply;
   struct ofp_flow_stats *fs, *flow_stats;
 
-  debug( "Creating a flow stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
+  //debug( "Creating a flow stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
 
   if ( flows_stats_head != NULL ) {
-    f = ( list_element * ) xmalloc( sizeof( list_element ) );
+    f = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( f, flows_stats_head, sizeof( list_element ) );
   }
 
@@ -1166,12 +817,12 @@ cc_create_flow_stats_reply( const uint32_t transaction_id, const uint16_t flags,
     flow = flow->next;
   }
 
-  debug( "# of flows = %d.", n_flows );
+  //debug( "# of flows = %d.", n_flows );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body ) + length );
 
   buffer = cc_create_stats_reply( transaction_id, OFPST_FLOW, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   flow_stats = ( struct ofp_flow_stats * ) stats_reply->body;
@@ -1185,7 +836,7 @@ cc_create_flow_stats_reply( const uint32_t transaction_id, const uint16_t flags,
   }
 
   if ( f != NULL ) {
-    xfree( f );
+    free( f );
   }
 
   return buffer;
@@ -1201,14 +852,14 @@ cc_create_aggregate_stats_reply( const uint32_t transaction_id, const uint16_t f
   struct ofp_stats_reply *stats_reply;
   struct ofp_aggregate_stats_reply *aggregate_stats_reply;
 
-  debug( "Creating an aggregate stats reply "
-         "( xid = %#x, flags = %#x, packet_count = %" PRIu64 ", byte_count = %" PRIu64 ", flow_count = %u ).",
-         transaction_id, flags, packet_count, byte_count, flow_count );
+  //debug( "Creating an aggregate stats reply "
+        // "( xid = %#x, flags = %#x, packet_count = %" PRIu64 ", byte_count = %" PRIu64 ", flow_count = %u ).",
+        // transaction_id, flags, packet_count, byte_count, flow_count );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                         + sizeof( struct ofp_aggregate_stats_reply ) );
   buffer = cc_create_stats_reply( transaction_id, OFPST_AGGREGATE, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   aggregate_stats_reply = ( struct ofp_aggregate_stats_reply * ) stats_reply->body;
@@ -1232,10 +883,10 @@ cc_create_table_stats_reply( const uint32_t transaction_id, const uint16_t flags
   struct ofp_stats_reply *stats_reply;
   struct ofp_table_stats *ts, *table_stats;
 
-  debug( "Creating a table stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
+  //debug( "Creating a table stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
 
   if ( table_stats_head != NULL ) {
-    t = ( list_element * ) xmalloc( sizeof( list_element ) );
+    t = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( t, table_stats_head, sizeof( list_element ) );
   }
 
@@ -1245,12 +896,12 @@ cc_create_table_stats_reply( const uint32_t transaction_id, const uint16_t flags
     table = table->next;
   }
 
-  debug( "# of tables = %u.", n_tables );
+  //debug( "# of tables = %u.", n_tables );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                         + sizeof( struct ofp_table_stats ) * n_tables );
   buffer = cc_create_stats_reply( transaction_id, OFPST_TABLE, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   table_stats = ( struct ofp_table_stats * ) stats_reply->body;
@@ -1264,7 +915,7 @@ cc_create_table_stats_reply( const uint32_t transaction_id, const uint16_t flags
   }
 
   if ( t != NULL ) {
-    xfree( t );
+    free( t );
   }
 
   return buffer;
@@ -1282,10 +933,10 @@ cc_create_port_stats_reply( const uint32_t transaction_id, const uint16_t flags,
   struct ofp_stats_reply *stats_reply;
   struct ofp_port_stats *ps, *port_stats;
 
-  debug( "Creating a port stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
+  //debug( "Creating a port stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
 
   if ( port_stats_head != NULL ) {
-    p = ( list_element * ) xmalloc( sizeof( list_element ) );
+    p = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( p, port_stats_head, sizeof( list_element ) );
   }
 
@@ -1295,12 +946,12 @@ cc_create_port_stats_reply( const uint32_t transaction_id, const uint16_t flags,
     port = port->next;
   }
 
-  debug( "# of ports = %u.", n_ports );
+  //debug( "# of ports = %u.", n_ports );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                           + sizeof( struct ofp_port_stats ) * n_ports );
   buffer = cc_create_stats_reply( transaction_id, OFPST_PORT, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   port_stats = ( struct ofp_port_stats * ) stats_reply->body;
@@ -1314,7 +965,7 @@ cc_create_port_stats_reply( const uint32_t transaction_id, const uint16_t flags,
   }
 
   if ( p != NULL ) {
-    xfree( p );
+    free( p );
   }
 
   return buffer;
@@ -1332,10 +983,10 @@ cc_create_queue_stats_reply( const uint32_t transaction_id, const uint16_t flags
   struct ofp_stats_reply *stats_reply;
   struct ofp_queue_stats *qs, *queue_stats;
 
-  debug( "Creating a queue stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
+  //debug( "Creating a queue stats reply ( xid = %#x, flags = %#x ).", transaction_id, flags );
 
   if ( queue_stats_head != NULL ) {
-    q = ( list_element * ) xmalloc( sizeof( list_element ) );
+    q = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( q, queue_stats_head, sizeof( list_element ) );
   }
 
@@ -1345,12 +996,12 @@ cc_create_queue_stats_reply( const uint32_t transaction_id, const uint16_t flags
     queue = queue->next;
   }
 
-  debug( "# of queues = %u.", n_queues );
+  //debug( "# of queues = %u.", n_queues );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                           + sizeof( struct ofp_queue_stats ) * n_queues );
   buffer = cc_create_stats_reply( transaction_id, OFPST_QUEUE, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   queue_stats = ( struct ofp_queue_stats * ) stats_reply->body;
@@ -1364,7 +1015,7 @@ cc_create_queue_stats_reply( const uint32_t transaction_id, const uint16_t flags
   }
 
   if ( q != NULL ) {
-    xfree( q );
+    free( q );
   }
 
   return buffer;
@@ -1385,13 +1036,13 @@ cc_create_vendor_stats_reply( const uint32_t transaction_id, const uint16_t flag
     data_length = ( uint16_t ) body->length;
   }
 
-  debug( "Creating a vendor stats reply ( xid = %#x, flags = %#x, vendor = %#x, data length = %u ).",
-         transaction_id, flags, vendor, data_length );
+  //debug( "Creating a vendor stats reply ( xid = %#x, flags = %#x, vendor = %#x, data length = %u ).",
+        // transaction_id, flags, vendor, data_length );
 
   length = ( uint16_t ) ( offsetof( struct ofp_stats_reply, body )
                         + sizeof( uint32_t ) + data_length );
   buffer = cc_create_stats_reply( transaction_id, OFPST_VENDOR, length, flags );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   stats_reply = ( struct ofp_stats_reply * ) buffer->data;
   v = ( uint32_t * ) stats_reply->body;
@@ -1408,7 +1059,7 @@ cc_create_vendor_stats_reply( const uint32_t transaction_id, const uint16_t flag
 
 buffer *
 cc_create_barrier_request( const uint32_t transaction_id ) {
-  debug( "Creating a barrier request ( xid = %#x ).", transaction_id );
+  //debug( "Creating a barrier request ( xid = %#x ).", transaction_id );
 
   return cc_create_header( transaction_id, OFPT_BARRIER_REQUEST, sizeof( struct ofp_header ) );
 }
@@ -1416,7 +1067,7 @@ cc_create_barrier_request( const uint32_t transaction_id ) {
 
 buffer *
 cc_create_barrier_reply( const uint32_t transaction_id ) {
-  debug( "Creating a barrier reply ( xid = %#x ).", transaction_id );
+  //debug( "Creating a barrier reply ( xid = %#x ).", transaction_id );
 
   return cc_create_header( transaction_id, OFPT_BARRIER_REPLY, sizeof( struct ofp_header ) );
 }
@@ -1427,11 +1078,11 @@ cc_create_queue_get_config_request( const uint32_t transaction_id, const uint16_
   buffer *buffer;
   struct ofp_queue_get_config_request *queue_get_config_request;
 
-  debug( "Creating a queue get config request ( xid = %#x, port = %u ).", transaction_id, port );
+  //debug( "Creating a queue get config request ( xid = %#x, port = %u ).", transaction_id, port );
 
   buffer = cc_create_header( transaction_id, OFPT_QUEUE_GET_CONFIG_REQUEST,
                           sizeof( struct ofp_queue_get_config_request ) );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   queue_get_config_request = ( struct ofp_queue_get_config_request * ) buffer->data;
   queue_get_config_request->port = htons( port );
@@ -1452,14 +1103,14 @@ cc_create_queue_get_config_reply( const uint32_t transaction_id, const uint16_t 
   struct ofp_queue_get_config_reply *queue_get_config_reply;
   struct ofp_packet_queue *pq, *packet_queue;
 
-  debug( "Creating a queue get config reply ( xid = %#x, port = %u ).", transaction_id, port );
+  //debug( "Creating a queue get config reply ( xid = %#x, port = %u ).", transaction_id, port );
 
 #ifndef UNIT_TESTING
-  assert( queues != NULL );
+  //assert( queues != NULL );
 #endif
 
   if ( queues != NULL ) {
-    q = ( list_element * ) xmalloc( sizeof( list_element ) );
+    q = ( list_element * ) malloc( sizeof( list_element ) );
     memcpy( q, queues, sizeof( list_element ) );
 
     queue = q;
@@ -1471,11 +1122,11 @@ cc_create_queue_get_config_reply( const uint32_t transaction_id, const uint16_t 
     }
   }
 
-  debug( "# of queues = %u.", n_queues );
+  //debug( "# of queues = %u.", n_queues );
 
   length = ( uint16_t ) ( offsetof( struct ofp_queue_get_config_reply, queues ) + queues_length );
   buffer = cc_create_header( transaction_id, OFPT_QUEUE_GET_CONFIG_REPLY, length );
-  assert( buffer != NULL );
+  //assert( buffer != NULL );
 
   queue_get_config_reply = ( struct ofp_queue_get_config_reply * ) buffer->data;
   queue_get_config_reply->port = htons( port );
@@ -1493,51 +1144,9 @@ cc_create_queue_get_config_reply( const uint32_t transaction_id, const uint16_t 
       queue = queue->next;
     }
 
-    xfree( q );
+    free( q );
   }
 
   return buffer;
-}
-
-
-uint32_t
-get_transaction_id( void ) {
-  debug( "Generating a transaction id." );
-
-  pthread_mutex_lock( &transaction_id_mutex );
-
-  if ( ( transaction_id & 0xffff ) == 0xffff ) {
-    transaction_id = transaction_id & 0xffff0000;
-  }
-  else {
-    transaction_id++;
-  }
-
-  pthread_mutex_unlock( &transaction_id_mutex );
-
-  debug( "Transaction id = %#x.", transaction_id );
-
-  return transaction_id;
-}
-
-
-uint64_t
-cc_get_cookie( void ) {
-  debug( "Generating a cookie." );
-
-  pthread_mutex_lock( &cookie_mutex );
-
-  if ( ( cookie & 0x0000ffffffffffffULL ) == 0x0000ffffffffffffULL ) {
-    cookie = cookie & 0xffff000000000000ULL;
-  }
-  else {
-    cookie++;
-  }
-
-  pthread_mutex_unlock( &cookie_mutex );
-
-  debug( "Cookie = %#" PRIx64 ".", cookie );
-
-  return cookie;
 }
 

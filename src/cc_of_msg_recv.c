@@ -41,21 +41,17 @@ cc_insert_to_app_queue(sw_info* cc_sw_info, buffer* buf)
 {
 	int ret;
 	buffer* msg;
-
+#if 0
 	if( sw_info->app_queue== NULL )
 		sw_info->app_queue = create_message_queue();
 
 	ret = enqueue_message(cc_sw_info->app_queue, buf);
-
-	return ret;
+#endif
+    /*now the app is not implement,so here we directly free the buffer*/
+	free_buffer(buf);
+	return CC_SUCCESS;
 }
 
-
-static inline uint32_t
-make_inet_mask(uint8_t len)
-{
-    return (~((1 << (32 - (len))) - 1));
-}
 
 char*
 cc_dump_flow(struct flow* flow,uint32_t wildcards)
@@ -173,7 +169,8 @@ cc_recv_hello_msg(sw_info* cc_sw_info,buffer* buf)
 	send_buf = cc_create_features_request(xid);
 	if( send_buf == NULL )
 	{
-		log_err_for_cc("cc_insert_to_send_queue error!");
+		log_err_for_cc("cc_insert_to_send_queue error!");		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	
@@ -181,7 +178,8 @@ cc_recv_hello_msg(sw_info* cc_sw_info,buffer* buf)
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");
-		free_buffer(send_buf);
+		free_buffer(send_buf);		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	free_buffer(buf);
@@ -266,7 +264,8 @@ cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf)
 	send_buf = cc_create_echo_reply(xid, buf);
 	if( send_buf == NULL )
 	{
-		log_err_for_cc("cc_insert_to_send_queue error!");
+		log_err_for_cc("cc_insert_to_send_queue error!");		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	
@@ -274,10 +273,11 @@ cc_recv_echo_request(sw_info* cc_sw_info,buffer* buf)
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");
-		free_buffer(send_buf);
+		free_buffer(send_buf);		
+		free_buffer(buf);
 		return CC_ERROR;
 	}	
-	
+	free_buffer(buf);
 	return ret;//here the xid should be correct!
 }
 
@@ -305,7 +305,8 @@ cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 		send_buf = cc_create_echo_request(xid, buf);
 		if( send_buf == NULL )
 		{
-			log_err_for_cc("cc_insert_to_send_queue error!");
+			log_err_for_cc("cc_insert_to_send_queue error!");			
+			free_buffer(buf);
 			return CC_ERROR;
 		}
 		
@@ -313,17 +314,16 @@ cc_recv_echo_reply(sw_info* cc_sw_info,buffer* buf)
 		if( ret < 0 )
 		{
 			log_err_for_cc("cc_insert_to_send_queue error!");
-			free_buffer(send_buf);
+			free_buffer(send_buf);			
+			free_buffer(buf);
 			return CC_ERROR;
 		}	
-		
-		free_buffer(buf);
 	}else{
-		log_err_for_cc("transction id is not complete!");
+		log_err_for_cc("transction id is not complete!");		
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-		
+	free_buffer(buf);		
 	return CC_SUCCESS;
 }
 
@@ -349,7 +349,8 @@ cc_recv_vendor(sw_info* cc_sw_info, buffer* buf)
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-
+	
+	free_buffer(buf);
 	return CC_SUCCESS;
 }
 
@@ -384,10 +385,12 @@ cc_recv_get_config_reply(sw_info* cc_sw_info, buffer* buf)
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_echo_request error!");
-		free_buffer(send_buf);
+		free_buffer(send_buf);		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	
+	free_buffer(buf);
 	return CC_SUCCESS;
 	
 }
@@ -413,7 +416,9 @@ cc_recv_flow_removed(sw_info* cc_sw_info, buffer* buf)
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-	return ret;
+	
+	free_buffer(buf);
+	return CC_SUCCESS;
 }
 
 
@@ -437,11 +442,13 @@ cc_recv_barrier_reply(sw_info* cc_sw_info, buffer* buf)
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-	return ret;
+	
+	free_buffer(buf);
+	return CC_SUCCESS;
 }
 
 
-static void
+static int
 cc_recv_features_reply(sw_info* cc_sw_info, buffer* buf)
 {
 	int ret;
@@ -484,19 +491,21 @@ cc_recv_features_reply(sw_info* cc_sw_info, buffer* buf)
 	send_buf = cc_create_set_config(xid, cc_sw_info->flags, cc_sw_info->miss_send_len);
 	if( send_buf == NULL )
 	{
-		log_err_for_cc("cc_create_set_config error!");
+		log_err_for_cc("cc_create_set_config error!");		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	ret = cc_insert_to_send_queue(cc_sw_info,send_buf);
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_create_echo_request error!");
-		free_buffer(send_buf);
+		free_buffer(send_buf);		
+		free_buffer(buf);
 		return CC_ERROR;
 	}
 	
-	free_buf(buf);
-	return ret;
+	free_buffer(buf);
+	return CC_SUCCESS;
 }
 
 static int
@@ -519,8 +528,8 @@ cc_recv_packet_in(sw_info* cc_sw_info,buffer* buf)
 		free_buffer(buf);
 		return CC_ERROR;
 	}
-
-	return ret
+	
+	return CC_SUCCESS
 }
 
 static int
@@ -575,7 +584,7 @@ cc_recv_stats_reply(sw_info* cc_sw_info, buffer* buf)
 }
 
 
-int
+static int
 cc_recv_flow_stats_reply(sw_info* cc_sw_info, buffer* buf)
 {
 	int ret;

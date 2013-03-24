@@ -18,15 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <assert.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "buffer.h"
-#include "checks.h"
-#include "utility.h"
-#include "wrapper.h"
+#include "cc_buffer.h"
 
 
 static size_t
@@ -47,7 +39,7 @@ already_allocated( buffer *buf, size_t length )
   	return ( buf->real_length >= required_len );
 }
 
-
+#if 0
 static buffer *
 alloc_new_data(buffer* buf,size_t length = dlf_length)
 {
@@ -63,7 +55,7 @@ alloc_new_data(buffer* buf,size_t length = dlf_length)
 
   return buf;
 }
-
+#endif
 
 static buffer *
 append_front( buffer* buf, size_t length ) 
@@ -113,7 +105,7 @@ append_back( buffer* buf, size_t length )
 
 
 buffer*
-alloc_empty_data()
+alloc_empty_data(void)
 {
 	buffer* buf = (buffer*)malloc(sizeof(buffer));
 	buf->data = NULL;
@@ -132,7 +124,7 @@ alloc_empty_data()
 }
 
 buffer*
-alloc_buffer() 
+alloc_buffer(void) 
 {
 	buffer* buf;
 	buf = alloc_empty_data();

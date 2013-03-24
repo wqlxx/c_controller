@@ -29,7 +29,8 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
- 
+#include "cc_basic.h"
+
 #define MAXINTERFACES 16    /* 最大接口数 */
 #define GET_LOCAL_IP_ERR -1
 

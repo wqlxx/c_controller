@@ -27,33 +27,33 @@ cc_select_handler(uint16_t type)
 	switch ( type ) {
   	// Immutable messages.
   		case OFPT_HELLO:
-			func_cb = cc_send_hello;
+			func_cb = cc_recv_hello_msg;
    			break;
 	
   		case OFPT_ERROR:
-			func_cb = cc_send_error_msg;
+			func_cb = cc_recv_err_msg;
    			break;
 
   		case OFPT_ECHO_REQUEST:
-			func_cb = cc_send_echo_request;
+			func_cb = cc_recv_echo_request;
     		break;
 
   		case OFPT_ECHO_REPLY:
-			func_cb = cc_send_echo_reply;
+			func_cb = cc_recv_echo_reply;
     		break;
 
   		case OFPT_VENDOR:
-			func_cb = cc_send_vendor_stats_request;
+			func_cb = cc_recv_vendor;
     		break;
 
   		// Switch configuration messages.
   		// Asynchronous messages.
   		case OFPT_FLOW_REMOVED:
-			func_cb = cc_send_flow_mod;
+			func_cb = cc_recv_flow_removed;
     		break;
 
   		case OFPT_PORT_STATUS:
-			func_cb = cc_send_port_stats_request;
+			func_cb = cc_recv_port_status;
     		break;
 
   		// Statistics messages.
@@ -70,7 +70,7 @@ cc_select_handler(uint16_t type)
     		break;
 
   		default:
-    		assert( 0 );
+    		func_cb = NULL;
     		break;
   }
 
@@ -91,27 +91,26 @@ cc_ofpmsg_handle(sw_info* cc_sw_info,buffer* buf)
 	header = buf->data;
 	ret = validate_openflow_message(buf);
 	if ( ret != 0 ) {
-    	perror( "Invalid openflow message. type:%d, errno:%d", header->type, ret );
+    	log_err_for_cc( "Invalid openflow message.");
 
     	error_type = OFPET_BAD_REQUEST;
     	error_code = OFPBRC_BAD_TYPE;
-    	get_error_type_and_code( header->type, ret, &error_type, &error_code );
-    	debug( "Validation error. type %u, errno %d, error type %u, error code %u",
-           header->type, ret, error_type, error_code );
+    	cc_trans_error_type_and_code( header->type, ret, &error_type, &error_code );
+    	//debug( "Validation error. type %u, errno %d, error type %u, error code %u",
+          // header->type, ret, error_type, error_code );
 
     	cc_send_error_msg( sw_info, error_type, error_code, buf );
     	free_buffer( buf );
 
     	return CC_ERROR;
 	}
-	worker_buf* buf_arg;
+	worker_buf* buf_arg = malloc(sizeof(worker_buf));
 	buf_arg->cc_sw_info = cc_sw_info;
 	buf_arg->buf = buf;
 	func_cb = cc_select_handler(header->type);
 
 	if(func_cb == NULL)
 	{
-		perror("handler ofmsg error");
 		log_err_for_cc("handlerofmsg error!");
 		return CC_ERROR;
 	}
@@ -138,20 +137,11 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info)
 		log_debug_for_cc("create buffer failed!");
 		return CC_ERROR;
 	}
-	/*
-	fd_set readfds;
-	struct 
-	int maxfd = cc_sw_info->cc_switch->cc_socket->fd + 1;
-	FD_SET(maxfd,&readfds);
-	ret = select(maxfd,&readfds,NULL,NULL,cc_time);
-	if( ret == 0 )
-	*/
 
 	tmp_recv_buff_length = read(cc_sw_info->cc_switch->cc_socket->fd, tmp_buff->data, CC_BUFFER_SIZE);
 	if(tmp_recv_buff_length < 0)
 	{
-		log_debug_for_cc("recv failed!");
-		perror("recv failed!");
+		log_err_for_cc("recv failed!");
 		if( errno == EINTER || errno == EAGAIN || errno == EWOULDBLOCK )
 		{
 			return CC_ERROR;
@@ -173,7 +163,7 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info)
 
 		header = tmp_buff->data;
 		if ( header->version != OFP_VERSION ) {
-      		error( "Receive error: invalid version (version %d)", header->version );
+      		log_err_for_cc( "Receive error: invalid version ");
       		cc_send_error_msg( sw_info,OFPET_BAD_REQUEST, OFPBRC_BAD_VERSION, sw_info->fragment_buf );
       		return CC_ERROR;
    		}
@@ -181,7 +171,7 @@ cc_recv_from_secure_channel(sw_info *cc_sw_info)
 		uint16_t message_length = ntohs( header->length );
 		if( message_length > CC_RECV_BUFFER_SIZE )
 		{
-			perror("recv msg size is larger than buff");
+			log_err_for_cc("recv msg size is larger than buff");
 			return CC_ERROR;
 		}
 		/*input the msg in queue*/

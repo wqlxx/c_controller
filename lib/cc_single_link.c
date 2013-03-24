@@ -15,10 +15,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-
-#include <assert.h>
-#include "linked_list.h"
-#include "wrapper.h"
+#include "cc_single_link.h"
 
 
 /**
@@ -31,7 +28,7 @@
 bool
 create_list( list_element **list ) {
   if ( list == NULL ) {
-    die( "list must not be NULL" );
+    log_err_for_cc( "list must not be NULL" );
   }
 
   *list = NULL;
@@ -49,7 +46,7 @@ create_list( list_element **list ) {
 bool
 insert_in_front( list_element **head, void *data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
 
   list_element *old_head = *head;
@@ -73,7 +70,7 @@ insert_in_front( list_element **head, void *data ) {
 bool
 insert_before( list_element **head, const void *sibling, void *data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
 
   for ( list_element *e = *head; e->next != NULL; e = e->next ) {
@@ -100,7 +97,7 @@ insert_before( list_element **head, const void *sibling, void *data ) {
 int
 append_to_tail( list_element **head, void *data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
 
   list_element *new_tail = malloc( sizeof( list_element ) );
@@ -144,13 +141,14 @@ list_length_of( const list_element *head ) {
  * @param user_data user-data to pass to the function.
  */
 void
-iterate_list( list_element *head, void function( void *data, void *user_data ), void *user_data ) {
+iterate_list( list_element *head, void (*function)( void *data, void *user_data ), void *user_data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
   if ( function != NULL ) {
-    for ( list_element *e = head; e != NULL; e = e->next ) {
-      function( e->data, user_data );
+    for ( list_element *e = head; e != NULL; e = e->next ) 
+	{
+      (*function)( e->data, user_data );
     }
   }
 }
@@ -169,10 +167,10 @@ iterate_list( list_element *head, void function( void *data, void *user_data ), 
 void *
 find_list_custom( list_element *head, bool function( void *data, void *user_data ), void *user_data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
   if ( function == NULL ) {
-    die( "function must not be NULL" );
+    log_err_for_cc( "function must not be NULL" );
   }
 
   void *data_found = NULL;
@@ -198,7 +196,7 @@ find_list_custom( list_element *head, bool function( void *data, void *user_data
 bool
 delete_element( list_element **head, const void *data ) {
   if ( head == NULL ) {
-    die( "head must not be NULL" );
+    log_err_for_cc( "head must not be NULL" );
   }
 
   list_element *e = *head;
